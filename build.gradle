@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+    id 'application'
+
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+}
+
+mainClassName = 'me.seymourkrelborn' //replace this with your bots full name (excluding the .java at the end)
+version = '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation group: 'com.sheepybot', name: 'API', version: 'b8dd8012d9'
+    implementation group: 'commons-validator', name: 'commons-validator', version: '1.6'
+}
+
+compileJava.options.encoding = 'UTF-8'
