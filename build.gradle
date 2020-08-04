@@ -17,7 +17,7 @@ repositories {
 }
 
 dependencies {
-    implementation group: 'com.sheepybot', name: 'API', version: 'b8dd8012d9'
+    implementation group: 'com.sheepybot', name: 'API', version: '91de93df43'
     implementation group: 'commons-validator', name: 'commons-validator', version: '1.6'
 }
 

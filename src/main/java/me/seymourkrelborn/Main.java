@@ -22,7 +22,7 @@ import me.seymourkrelborn.music.event.GuildMessageReactionListener;
 import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
 import net.dv8tion.jda.api.sharding.ShardManager;
 
-@ModuleData(name = "Music", version = "1.0")
+@ModuleData(name = "Music", version = "1.1.1")
 public class Main extends Module {
 
     private static Main instance;
@@ -37,7 +37,7 @@ public class Main extends Module {
     private AudioLoader loader;
 
     @Override
-    public void onEnable(final ShardManager shardManager) {
+    public void onEnable() {
 
         Main.instance = this;
 
@@ -63,20 +63,20 @@ public class Main extends Module {
 
         final CommandRegistry commandRegistry = this.getCommandRegistry();
 
-        commandRegistry.register(Command.builder().names("clear").description("Clear the command queue").usage("clear").executor(new CommandClear()).build());
-        commandRegistry.register(Command.builder().names("loop").description("Loop the music queue").usage("loop").executor(new CommandLoop()).build());
-        commandRegistry.register(Command.builder().names("pause", "resume").description("Pause/resume the playing song.").usage("pause").executor(new CommandPause()).build());
-        commandRegistry.register(Command.builder().names("play").description("Play a song either from a URL or select from a list of returned results.").usage("play <track URL / search query>").executor(new CommandPlay()).build());
-        commandRegistry.register(Command.builder().names("playing", "np").description("Show the currently playing song").usage("playing").executor(new CommandPlaying()).build());
+        commandRegistry.register(Command.builder().names("clear").description("Clear the command queue").executor(new CommandClear()).build());
+        commandRegistry.register(Command.builder().names("loop").description("Loop the music queue").executor(new CommandLoop()).build());
+        commandRegistry.register(Command.builder().names("pause", "resume").description("Pause/resume the playing song.").executor(new CommandPause()).build());
+        commandRegistry.register(Command.builder().names("play").description("Play a song either from a URL or select from a list of returned results.").usage("<track URL / search query>").executor(new CommandPlay()).build());
+        commandRegistry.register(Command.builder().names("playing", "np").description("Show the currently playing song").executor(new CommandPlaying()).build());
         commandRegistry.register(Command.builder().names("queue").description("List all songs in the queue").usage("queue").executor(new CommandQueue()).build());
-        commandRegistry.register(Command.builder().names("remove").description("Remove a song requested by a user / track ID from the queue").usage("remove <trackId / @user>").executor(new CommandRemove()).build());
-        commandRegistry.register(Command.builder().names("repeat").description("Repeat the currently playing song").usage("repeat").executor(new CommandRepeat()).build());
-        commandRegistry.register(Command.builder().names("restart").description("Restart the currently playing song").usage("restart").executor(new CommandRestart()).build());
-        commandRegistry.register(Command.builder().names("seek", "goto").description("Seek to a time in a song").usage("seek <time (e.g. 5m0s)>").executor(new CommandSeek()).build());
-        commandRegistry.register(Command.builder().names("shuffle").description("Shuffle the music queue").usage("shuffle").executor(new CommandShuffle()).build());
-        commandRegistry.register(Command.builder().names("skip").description("Skip the currently playing song").usage("skip").executor(new CommandSkip()).build());
-        commandRegistry.register(Command.builder().names("stop").description("Stop playing and leave the voice channel emptying the song queue").usage("stop").executor(new CommandStop()).build());
-        commandRegistry.register(Command.builder().names("volume").description("Set the volume for music").usage("volume <0-150 (higher than 100 is painful)").executor(new CommandVolume()).build());
+        commandRegistry.register(Command.builder().names("remove").description("Remove a song requested by a user / track ID from the queue").usage("<trackId / @user>").executor(new CommandRemove()).build());
+        commandRegistry.register(Command.builder().names("repeat").description("Repeat the currently playing song").executor(new CommandRepeat()).build());
+        commandRegistry.register(Command.builder().names("restart").description("Restart the currently playing song").executor(new CommandRestart()).build());
+        commandRegistry.register(Command.builder().names("seek", "goto").description("Seek to a time in a song").usage("<time (e.g. 5m3s = 5 minutes, 3 seconds)>").executor(new CommandSeek()).build());
+        commandRegistry.register(Command.builder().names("shuffle").description("Shuffle the music queue").executor(new CommandShuffle()).build());
+        commandRegistry.register(Command.builder().names("skip").description("Skip the currently playing song").executor(new CommandSkip()).build());
+        commandRegistry.register(Command.builder().names("stop").description("Stop playing and leave the voice channel emptying the song queue").executor(new CommandStop()).build());
+        commandRegistry.register(Command.builder().names("volume").description("Set the volume for music").usage("<0-150 (higher than 100 is painful)").executor(new CommandVolume()).build());
 
         final EventRegistry eventRegistry = this.getEventRegistry();
         eventRegistry.registerEvent(new GuildMessageReactionListener());
