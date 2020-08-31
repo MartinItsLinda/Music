@@ -1,0 +1,95 @@
+package net.tempobot;
+
+import com.sedmelluq.discord.lavaplayer.player.AudioConfiguration;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.source.bandcamp.BandcampAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.beam.BeamAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.local.LocalAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.twitch.TwitchStreamAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.vimeo.VimeoAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager;
+import com.sheepybot.api.entities.command.Command;
+import com.sheepybot.api.entities.module.CommandRegistry;
+import com.sheepybot.api.entities.module.EventRegistry;
+import com.sheepybot.api.entities.module.Module;
+import com.sheepybot.api.entities.module.ModuleData;
+import net.tempobot.music.audio.AudioLoader;
+import me.tempo.music.commands.*;
+import net.tempobot.music.event.GuildMessageReactionListener;
+import net.tempobot.music.commands.*;
+
+@ModuleData(name = "Music", version = "1.1.1")
+public class Main extends Module {
+
+    private static Main instance;
+
+    public static Main get() {
+        if (instance == null) {
+            throw new IllegalStateException("Cannot use #get() when the module isn't loaded yet");
+        }
+        return instance;
+    }
+
+    private AudioLoader loader;
+
+    @Override
+    public void onEnable() {
+
+        Main.instance = this;
+
+        final AudioPlayerManager audioPlayerManager = new DefaultAudioPlayerManager();
+
+        final YoutubeAudioSourceManager youtubeAudioSourceManager = new YoutubeAudioSourceManager();
+        youtubeAudioSourceManager.setPlaylistPageCount(5);
+
+        audioPlayerManager.registerSourceManager(youtubeAudioSourceManager);
+        audioPlayerManager.registerSourceManager(SoundCloudAudioSourceManager.createDefault());
+        audioPlayerManager.registerSourceManager(new BandcampAudioSourceManager());
+        audioPlayerManager.registerSourceManager(new VimeoAudioSourceManager());
+        audioPlayerManager.registerSourceManager(new TwitchStreamAudioSourceManager());
+        audioPlayerManager.registerSourceManager(new BeamAudioSourceManager());
+        audioPlayerManager.registerSourceManager(new HttpAudioSourceManager());
+        audioPlayerManager.registerSourceManager(new LocalAudioSourceManager());
+
+        audioPlayerManager.getConfiguration().setFilterHotSwapEnabled(true);
+        audioPlayerManager.getConfiguration().setResamplingQuality(AudioConfiguration.ResamplingQuality.HIGH);
+
+        this.loader = new AudioLoader(audioPlayerManager);
+
+        final CommandRegistry commandRegistry = this.getCommandRegistry();
+
+
+        commandRegistry.register(Command.builder().names("clear").description("Clear the command queue").executor(new CommandClear()).build());
+        commandRegistry.register(Command.builder().names("loop").description("Loop the music queue").executor(new CommandLoop()).build());
+        commandRegistry.register(Command.builder().names("pause", "resume").description("Pause/resume the playing song.").executor(new CommandPause()).build());
+        commandRegistry.register(Command.builder().names("play").description("Play a song either from a URL or select from a list of returned results.").usage("<track URL / search query>").executor(new CommandPlay()).build());
+        commandRegistry.register(Command.builder().names("playing", "np").description("Show the currently playing song").executor(new CommandPlaying()).build());
+        commandRegistry.register(Command.builder().names("queue").description("List all songs in the queue").usage("queue").executor(new CommandQueue()).build());
+        commandRegistry.register(Command.builder().names("remove").description("Remove a song requested by a user / track ID from the queue").usage("<trackId / @user>").executor(new CommandRemove()).build());
+        commandRegistry.register(Command.builder().names("repeat").description("Repeat the currently playing song").executor(new CommandRepeat()).build());
+        commandRegistry.register(Command.builder().names("restart").description("Restart the currently playing song").executor(new CommandRestart()).build());
+        commandRegistry.register(Command.builder().names("seek", "goto").description("Seek to a time in a song").usage("<time (e.g. 5m3s = 5 minutes, 3 seconds)>").executor(new CommandSeek()).build());
+        commandRegistry.register(Command.builder().names("shuffle").description("Shuffle the music queue").executor(new CommandShuffle()).build());
+        commandRegistry.register(Command.builder().names("skip").description("Skip the currently playing song").executor(new CommandSkip()).build());
+        commandRegistry.register(Command.builder().names("stop").description("Stop playing and leave the voice channel emptying the song queue").executor(new CommandStop()).build());
+        commandRegistry.register(Command.builder().names("volume").description("Set the volume for music").usage("<0-150 (higher than 100 is painful)").executor(new CommandVolume()).build());
+
+        final EventRegistry eventRegistry = this.getEventRegistry();
+        eventRegistry.registerEvent(new GuildMessageReactionListener());
+
+    }
+
+    @Override
+    public void onDisable() {
+        if (this.loader != null) {
+            this.loader.shutdown();
+        }
+    }
+
+    public AudioLoader getAudioLoader() {
+        return this.loader;
+    }
+}
