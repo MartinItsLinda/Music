@@ -153,9 +153,9 @@ public class AudioController {
     /**
      * Retrieve the time in which this {@link AudioController} was paused.
      *
-     * @return The time in millis this {@link AudioController} was paused or {@code -1} if the {@link AudioController} isn't paused.
+     * @return The time in millis this {@link AudioController} last stopped playing at or {@code -1} if the {@link AudioController} is still playing.
      */
-    public long getPauseTime() {
+    public long getTimeLastPlayed() {
         return this.pauseTime;
     }
 
@@ -211,6 +211,7 @@ public class AudioController {
     /**
      * @return {@code true} if this {@link AudioController} is valid, {@code false} otherwise
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isValid() {
         return this.isValid.get();
     }
@@ -240,16 +241,26 @@ public class AudioController {
 
     /**
      * Destroy this {@link AudioController}
+     *
+     * @param saveQueues Whether to save the audio queue to the database
      */
-    public boolean destroy() {
+    public boolean destroy(final boolean saveQueues) {
         if (this.isValid.get()) {
+
+            if (saveQueues) {
+                this.scheduler.saveQueue();
+            }
+
             try {
                 this.disconnect();
+                this.scheduler.saveTracks();
                 this.scheduler.clear();
+                this.scheduler.getUpdaterTask().cancel();
                 this.audioPlayer.destroy();
             } catch (final Throwable ex) {
                 LOGGER.info("An error occurred during destruction of AudioController for guild %s", ex);
             }
+
             this.loader.remove(this);
             this.isValid.set(false);
             return true;

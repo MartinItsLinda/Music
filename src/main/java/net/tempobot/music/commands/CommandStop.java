@@ -6,21 +6,26 @@ import com.sheepybot.api.entities.command.CommandExecutor;
 import net.tempobot.Main;
 import net.tempobot.music.audio.AudioController;
 
+import java.util.concurrent.TimeUnit;
+
 public class CommandStop implements CommandExecutor {
 
     @Override
-    public void execute(CommandContext context, Arguments args) {
+    public void execute(final CommandContext context,
+                        final Arguments args) {
+
+        context.getMessage().delete().queue();
 
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());
         if (controller == null) {
-            context.reply("There's no music currently playing.");
+            context.message("Sorry but there's no music currently playing. :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
             controller.getTrackScheduler().clear();
             controller.getPlayer().stopTrack();
             controller.disconnect();
-            controller.destroy();
+            controller.destroy(false);
 
-            context.reply("I've stopped playing music and left the voice channel");
+            context.message("It's sad to say goodbye, I've stopped playing music and left the voice channel. :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
         }
         
     }

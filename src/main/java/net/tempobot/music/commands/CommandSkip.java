@@ -8,31 +8,35 @@ import net.tempobot.music.audio.AudioController;
 import net.tempobot.music.audio.TrackScheduler;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 
+import java.util.concurrent.TimeUnit;
+
 public class CommandSkip implements CommandExecutor {
 
     @Override
     public void execute(final CommandContext context, 
                         final Arguments args) {
 
+        context.getMessage().delete().queue();
+
         final GuildVoiceState state = context.getMember().getVoiceState();
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());
         if (state == null || state.getChannel() == null || controller == null || controller.getVoiceChannelId() != state.getChannel().getIdLong()) {
-            context.reply("You must be in the same voice channel as me to do this.");
+            context.message("Sorry but you've gotta be in the same voice channel as me to use this. :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
             final TrackScheduler scheduler = controller.getTrackScheduler();
             if (scheduler.isDJ(context.getMember())) {
-                context.reply("The current song has forcibly been skipped by " + context.getUser().getAsTag());
+                context.message("The song was force skipped by DJ " + context.getUser().getAsTag() + ".").deleteAfter(10, TimeUnit.SECONDS).send();
                 scheduler.next(true);
             } else {
                 if (scheduler.voteSkip(context.getMember())) {
                     if ((state.getChannel().getMembers().stream().filter(member -> !member.getUser().isBot()).count() / 2) <= scheduler.getSkipVotes()) {
-                        context.reply("I've skipped the current song as enough people have voted");
+                        context.message("Skipping the current song as at least half the voice channel has voted.").deleteAfter(10, TimeUnit.SECONDS).send();
                         scheduler.next(true);
                     } else {
-                        context.reply(context.getMember().getAsMention() + " has voted to skip the current song.");
+                        context.message(context.getMember().getAsMention() + " voted to skip this song.").deleteAfter(10, TimeUnit.SECONDS).send();
                     }
                 } else {
-                    context.reply("You have already voted to skip");
+                    context.message("You already voted skip :confused:").deleteAfter(10, TimeUnit.SECONDS).send();
                 }
             }
         }

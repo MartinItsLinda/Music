@@ -28,7 +28,7 @@ public class GuildVoiceListener implements EventListener {
 
         if (controller != null && controller.getVoiceChannelId() == event.getChannelLeft().getIdLong()) {
             if (event.getMember().getIdLong() == event.getGuild().getSelfMember().getIdLong()) {
-                controller.destroy();
+                controller.destroy(false);
             } else if (event.getChannelLeft().getMembers().stream().allMatch(member -> member.getUser().isBot())) {
                 controller.setPaused(true);
             }

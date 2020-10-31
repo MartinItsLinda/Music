@@ -17,14 +17,14 @@ public class AudioUtils {
     public static String formatProgressBar(final double progress,
                                            final double length) {
 
-        //formula = ((progress / length) * 100) / (iterations in for loop / 100)) (6.66 15's in 100)
+        //formula = ((progress / length) * 100) / (iterations in for loop / 100) (6.66 15's in 100)
         final double percent = ((progress / length) * 100 / 6.66);
 
         final StringBuilder bar = new StringBuilder();
 
         for (int i = 0; i < 15; i++) {
-            if (percent >= 6.66 && i <= percent && percent > 0) {
-                bar.append("[▬](https://www.sheepybot.com)");
+            if (progress == length || percent > 95 || percent >= 3 && i <= percent) {
+                bar.append("[▬](https://tempobot.net)");
             } else {
                 bar.append("▬");
             }
@@ -86,7 +86,13 @@ public class AudioUtils {
     public static String formatTrackLength(final long millis,
                                            final boolean shortened) throws IllegalArgumentException {
 
-        if (millis == 0) return "00:00";
+        if (millis == 0) {
+            if (shortened) {
+                return "00:00";
+            } else {
+                return "0 seconds";
+            }
+        }
 
         final int seconds = (int) (millis / 1000);
         final long hours = TimeUnit.SECONDS.toHours(seconds);

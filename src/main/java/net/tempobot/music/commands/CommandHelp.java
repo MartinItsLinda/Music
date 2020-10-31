@@ -20,9 +20,9 @@ public class CommandHelp implements CommandExecutor {
 
         final StringJoiner joiner = new StringJoiner("\n");
         joiner.add("_ _");
-        joiner.add("Hello, I'm Tempo!");
+        joiner.add("Hey there, I'm Tempo!");
         joiner.add("_ _");
-        joiner.add("You can view my list of commands on my website [here](https://tempobot.net)");
+        joiner.add("You can view my list of commands on my website [here](https://tempobot.net/commands)");
         joiner.add("_ _");
         joiner.add("If you need some help in getting me setup then please join my support server [here](https://discord.gg/6YKNbBt)");
         joiner.add("_ _");

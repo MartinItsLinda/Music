@@ -2,6 +2,8 @@ package net.tempobot.music.audio;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioConfiguration;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackState;
+import com.sheepybot.api.entities.messaging.Messaging;
 import net.tempobot.Main;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -13,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class AudioLoader {
 
@@ -27,6 +29,25 @@ public class AudioLoader {
         this.audioPlayerManager.getConfiguration().setResamplingQuality(AudioConfiguration.ResamplingQuality.HIGH);
 
         Main.get().getScheduler().runTaskRepeating(new AudioLoaderCleanupTask(this), TimeUnit.MINUTES.toMillis(15), TimeUnit.MINUTES.toMillis(5));
+    }
+
+    /**
+     * @return A {@link Map} of {@link Guild} IDs and their associated {@link AudioController}
+     */
+    public Map<Long, AudioController> getControllers() {
+        return this.controllers;
+    }
+
+    /**
+     * Filters all {@link AudioController}s by those that are currently playing audio.
+     *
+     * @return A {@link Map} of {@link Guild} IDs and their associated {@link AudioController}s
+     */
+    public Map<Long, AudioController> getActiveControllers() {
+        return this.controllers.entrySet().stream().filter(entry -> {
+            final AudioController controller = entry.getValue();
+            return !controller.getPlayer().isPaused() && controller.getPlayer().getPlayingTrack() != null && controller.getPlayer().getPlayingTrack().getState() != AudioTrackState.FINISHED;
+        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /**
@@ -77,9 +98,11 @@ public class AudioLoader {
 
     /**
      * Destroy this {@link AudioLoader}
+     *
+     * @param saveQueues Whether to save queues to the database
      */
-    public void shutdown() {
-        this.controllers.values().forEach(AudioController::destroy);
+    public void shutdown(final boolean saveQueues) {
+        this.controllers.values().forEach(controller -> controller.destroy(saveQueues));
         this.controllers.clear();
     }
 
@@ -98,22 +121,20 @@ public class AudioLoader {
 
             LOGGER.info("Cleaning up expired AudioControllers (> 15 min waiting)");
 
-            final AtomicInteger purged = new AtomicInteger(0);
-            this.audioLoader.controllers.values().forEach(controller -> {
-                if (!controller.getTrackScheduler().is247() && controller.getPauseTime() != -1 && (System.currentTimeMillis() - controller.getPauseTime()) >= TimeUnit.MINUTES.toMillis(15)) {
+            this.audioLoader.controllers.values().removeIf(controller -> {
+                if (!controller.isValid() || controller.getTimeLastPlayed() != -1 && (System.currentTimeMillis() - controller.getTimeLastPlayed()) >= TimeUnit.MINUTES.toMillis(15)) {
 
                     final TextChannel channel = controller.getJDA().getTextChannelById(controller.getTextChannelId());
                     if (channel != null) {
-                        channel.sendMessage("I've left the voice channel due to idling for more than 15 minutes.").queue();
+                        Messaging.message(channel, "To save on bandwidth I've automatically left the voice channel due to inactivity.").deleteAfter(10, TimeUnit.SECONDS).send();
                     }
 
-                    controller.destroy();
-                    this.audioLoader.controllers.remove(controller.getGuildId());
-                    purged.incrementAndGet();
-                }
-            });
+                    controller.destroy(false);
 
-            LOGGER.info(String.format("Cleaned up %d expired AudioControllers", purged.get()));
+                    return true;
+                }
+                return false;
+            });
 
         }
     }

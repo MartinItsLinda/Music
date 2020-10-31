@@ -7,6 +7,8 @@ import com.sheepybot.api.entities.command.CommandExecutor;
 import net.tempobot.Main;
 import net.tempobot.music.audio.AudioController;
 
+import java.util.concurrent.TimeUnit;
+
 public class CommandPause implements CommandExecutor {
 
     @Override
@@ -17,16 +19,16 @@ public class CommandPause implements CommandExecutor {
 
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());
         if (controller == null || controller.getPlayer().getPlayingTrack() == null) {
-            context.reply("There's no music currently playing.");
+            context.message("Sorry but I'm not in a voice channel so there's no music to pause/resume :confused:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
             final AudioPlayer player = controller.getPlayer();
 
             player.setPaused(!player.isPaused());
 
             if (player.isPaused()) {
-                context.reply("The player has been paused!");
+                context.message("And then there was silence. :zipper_mouth:").deleteAfter(10, TimeUnit.SECONDS).send();
             } else {
-                context.reply("The player has been resumed!");
+                context.message("Bringing back the music, this might take a second...").deleteAfter(10, TimeUnit.SECONDS).send();
             }
         }
         

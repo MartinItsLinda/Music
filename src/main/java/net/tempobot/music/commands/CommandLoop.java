@@ -7,24 +7,28 @@ import net.tempobot.Main;
 import net.tempobot.music.audio.AudioController;
 import net.tempobot.music.audio.TrackScheduler;
 
+import java.util.concurrent.TimeUnit;
+
 public class CommandLoop implements CommandExecutor {
 
     @Override
     public void execute(final CommandContext context, 
                         final Arguments args) {
 
+        context.getMessage().delete().queue();
+
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());
         if (controller == null) {
-            context.reply("There's no music currently playing.");
+            context.message("Sorry but I'm not in a voice channel so there's no music to loop :confused:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
             final TrackScheduler scheduler = controller.getTrackScheduler();
 
             scheduler.setLooping(!scheduler.isLooping());
 
             if (scheduler.isLooping()) {
-                context.reply("The music queue is now looping");
+                context.message("Keeping the tunes rolling! The current song will continue to play over and over until you run this command again.").deleteAfter(10, TimeUnit.SECONDS).send();
             } else {
-                context.reply("The music queue is no longer looping");
+                context.message("Time for a change? Once this song ends then the queue will continue as normal.").deleteAfter(10, TimeUnit.SECONDS).send();
             }
 
         }

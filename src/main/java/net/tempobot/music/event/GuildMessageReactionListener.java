@@ -3,6 +3,7 @@ package net.tempobot.music.event;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sheepybot.api.entities.event.EventHandler;
 import com.sheepybot.api.entities.event.EventListener;
+import com.sheepybot.api.entities.messaging.Messaging;
 import net.tempobot.Main;
 import net.tempobot.music.audio.AudioController;
 import net.tempobot.music.audio.TrackScheduler;
@@ -12,6 +13,8 @@ import net.dv8tion.jda.api.entities.MessageReaction;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveEvent;
+
+import java.util.concurrent.TimeUnit;
 
 public class GuildMessageReactionListener implements EventListener {
 
@@ -26,7 +29,7 @@ public class GuildMessageReactionListener implements EventListener {
             final AudioController controller = Main.get().getAudioLoader().getController(event.getGuild());
             final GuildVoiceState state = event.getMember().getVoiceState();
 
-            if (controller != null && event.getMessageIdLong() == controller.getTrackScheduler().getMessageId() &&
+            if (controller != null && event.getMessageIdLong() == controller.getTrackScheduler().getCurrentSongMessageId() &&
                     state != null && state.getChannel() != null && state.getChannel().getIdLong() == controller.getVoiceChannelId()) {
 
                 final TrackScheduler scheduler = controller.getTrackScheduler();
@@ -58,15 +61,15 @@ public class GuildMessageReactionListener implements EventListener {
                         case Characters.TRACK_NEXT_NAME:
 
                             if (scheduler.isDJ(event.getMember())) {
-                                channel.sendMessage("The current song has forcibly been skipped by " + event.getMember().getUser().getAsTag()).queue();
+                                Messaging.message(channel, "The song was force skipped by a DJ.").deleteAfter(10, TimeUnit.SECONDS).send();
                                 scheduler.next(true);
                             } else {
                                 if (scheduler.voteSkip(event.getMember())) {
                                     if ((state.getChannel().getMembers().size() / 2) <= scheduler.getSkipVotes()) {
-                                        channel.sendMessage("I've skipped the current song as enough people have voted").queue();
+                                        Messaging.message(channel, "Skipping the current song as at least half the voice channel has voted.").deleteAfter(10, TimeUnit.SECONDS).send();
                                         scheduler.next(true);
                                     } else {
-                                        channel.sendMessage(event.getMember().getAsMention() + " has voted to skip the current song.").queue();
+                                        Messaging.message(channel, "You voted to skip this song.").deleteAfter(10, TimeUnit.SECONDS).send();
                                     }
                                 }
                             }
@@ -80,9 +83,9 @@ public class GuildMessageReactionListener implements EventListener {
                             scheduler.setLooping(!scheduler.isLooping());
 
                             if (scheduler.isLooping()) {
-                                channel.sendMessage("The music queue is now looping").queue();
+                                Messaging.message(channel, "Keeping the tunes rolling! The current song will continue to play over and over until you run this command again.").deleteAfter(10, TimeUnit.SECONDS).send();
                             } else {
-                                channel.sendMessage("The music queue is no longer looping").queue();
+                                Messaging.message(channel, "Time for a change? Once this song ends then the queue will continue as normal.").deleteAfter(10, TimeUnit.SECONDS).send();
                             }
 
                             return;
@@ -90,28 +93,17 @@ public class GuildMessageReactionListener implements EventListener {
                             scheduler.setRepeating(!scheduler.isRepeating());
 
                             if (scheduler.isRepeating()) {
-                                channel.sendMessage("The current song is now looping").queue();
+                                Messaging.message(channel, "Once a song ends it will be added again to the back of the queue.").deleteAfter(10, TimeUnit.SECONDS);
                             } else {
-                                channel.sendMessage("The current song is no longer looping").queue();
+                                Messaging.message(channel, "When your song ends you will have to add it if you want to listen to it again.").deleteAfter(10, TimeUnit.SECONDS);
                             }
 
                             return;
-//                        case Characters.AUTOPLAY_NAME:
-//
-//                            scheduler.setAutoplay(!scheduler.isAutoplay());
-//
-//                            if (scheduler.isAutoplay()) {
-//                                channel.sendMessage("When the queue finishes, I will find related videos on YouTube and auto play them.").queue();
-//                            } else {
-//                                channel.sendMessage("Auto play has been turned off, I will no longer search YouTube for related videos.").queue();
-//                            }
-//
-//                            return;
                         case Characters.STOP_PLAYING_NAME:
 
-                            controller.destroy();
+                            controller.destroy(false);
 
-                            channel.sendMessage("I've stopped playing music and left the voice channel").queue();
+                            Messaging.message(channel, "It's sad to say goodbye, I've stopped playing music and left the voice channel. :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
 
                             return;
                         default:
@@ -139,7 +131,7 @@ public class GuildMessageReactionListener implements EventListener {
                 final AudioController controller = Main.get().getAudioLoader().getController(event.getGuild());
 
                 final GuildVoiceState state = member.getVoiceState();
-                if (controller != null && event.getMessageIdLong() == controller.getTrackScheduler().getMessageId() &&
+                if (controller != null && event.getMessageIdLong() == controller.getTrackScheduler().getCurrentSongMessageId() &&
                         state != null && state.getChannel() != null && state.getChannel().getIdLong() == controller.getVoiceChannelId()) {
 
                     final TrackScheduler scheduler = controller.getTrackScheduler();

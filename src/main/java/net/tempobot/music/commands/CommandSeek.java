@@ -8,34 +8,38 @@ import net.tempobot.Main;
 import net.tempobot.music.audio.AudioController;
 import net.tempobot.music.util.DateUtils;
 
+import java.util.concurrent.TimeUnit;
+
 public class CommandSeek implements CommandExecutor {
 
     @Override
     public void execute(final CommandContext context,
                         final Arguments args) {
 
+        context.getMessage().delete().queue();
+
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());
         if (controller == null || controller.getPlayer().getPlayingTrack() == null) {
-            context.reply("There's no music currently playing.");
+            context.message("Sorry but there's no music currently playing :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
 
             if (!controller.getPlayer().getPlayingTrack().isSeekable()) {
-                context.reply("I'm sorry but this kind of audio track doesn't support seek");
+                context.message("I'm sorry but this kind of audio track doesn't support seek").deleteAfter(10, TimeUnit.SECONDS).send();
             } else {
 
                 final long timestamp;
                 try {
                     timestamp = System.currentTimeMillis() - DateUtils.parseDateDiff(args.next(ArgumentParsers.REMAINING_STRING_NO_QUOTE), false);
                 } catch (final Exception ignored) {
-                    context.reply("Where do you want me to seek to? Type it like this 1h2m5s.");
+                    context.message("Where do you want me to seek to? Type it like this 1h2m5s.").deleteAfter(10, TimeUnit.SECONDS);
                     return;
                 }
 
                 if (timestamp > controller.getPlayer().getPlayingTrack().getDuration()) {
-                    context.reply("The track isn't that long.");
+                    context.message("Sorry but the track isn't that long. :confused:").deleteAfter(10, TimeUnit.SECONDS);
                 } else {
                     controller.getPlayer().getPlayingTrack().setPosition(timestamp);
-                    context.reply("I've seeked to the requested time.");
+                    context.message("I've zoomed ahead to requested time.").deleteAfter(10, TimeUnit.SECONDS).send();
                 }
 
             }

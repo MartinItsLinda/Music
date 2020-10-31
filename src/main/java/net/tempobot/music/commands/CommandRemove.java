@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.entities.Member;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class CommandRemove implements CommandExecutor {
 
@@ -26,13 +27,13 @@ public class CommandRemove implements CommandExecutor {
         final GuildVoiceState state = context.getMember().getVoiceState();
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());
         if (state == null || state.getChannel() == null || controller == null || controller.getVoiceChannelId() != state.getChannel().getIdLong()) {
-            context.reply("You must be in a voice channel to do this.");
+            context.message("Sorry but you've gotta be in the same voice channel as me to use this. :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
             final TrackScheduler scheduler = controller.getTrackScheduler();
             if (scheduler.getPlayer().getPlayingTrack() == null) {
-                context.reply("There's no music currently playing.");
+                context.message("Sorry but there's no music currently playing :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
             } if (!(scheduler.isDJ(context.getMember()))) {
-                context.reply("You must be either alone, have the DJ role or an admin to do this.");
+                context.message("You must be either alone, have a role called DJ or be an admin to do this.").deleteAfter(10, TimeUnit.SECONDS).send();
             } else {
                 final List<AudioTrack> queue = (LinkedList<AudioTrack>) scheduler.getQueue();
 
@@ -43,21 +44,21 @@ public class CommandRemove implements CommandExecutor {
 
                     queue.removeIf(track -> track.getUserData() != null && track.getUserData().equals(tag));
 
-                    context.reply("I've removed all tracks requested by " + member.getAsMention());
+                    context.message("I've removed all tracks requested by " + member.getAsMention()).deleteAfter(10, TimeUnit.SECONDS).send();
 
                 } else {
 
                     int position = args.next(ArgumentParsers.INTEGER);
 
                     if (position <= 0 || position > queue.size()) {
-                        context.reply("Please track between 1 and " + queue.size());
+                        context.message("Please give a track number between 1 and " + queue.size()).deleteAfter(10, TimeUnit.SECONDS).send();
                     } else {
                         final AudioTrack track = queue.get(--position);
                         final AudioTrackInfo info = track.getInfo();
 
                         queue.remove(position);
 
-                        context.reply("I've removed " + info.title + " by " + info.author + " from the queue");
+                        context.message("I've removed " + info.title + " by " + info.author + " from the queue").deleteAfter(10, TimeUnit.SECONDS).send();
                     }
 
                 }

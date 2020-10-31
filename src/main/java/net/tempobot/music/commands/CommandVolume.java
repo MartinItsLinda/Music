@@ -12,16 +12,20 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 
 import java.awt.*;
+import java.util.concurrent.TimeUnit;
 
 public class CommandVolume implements CommandExecutor {
 
     @Override
-    public void execute(CommandContext context, Arguments args) {
+    public void execute(final CommandContext context,
+                        final Arguments args) {
+
+        context.getMessage().delete().queue();
 
         final GuildVoiceState state = context.getMember().getVoiceState();
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());
         if (state == null || state.getChannel() == null || controller == null || controller.getVoiceChannelId() != state.getChannel().getIdLong()) {
-            context.reply("You must be in the same voice channel as me to do this.");
+            context.message("Sorry but you've gotta be in the same voice channel as me to use this. :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
 
             final int parsedVolume = args.next(ArgumentParsers.alt(ArgumentParsers.INTEGER, controller.getPlayer().getVolume()));

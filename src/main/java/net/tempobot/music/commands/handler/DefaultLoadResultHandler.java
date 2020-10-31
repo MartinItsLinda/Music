@@ -30,8 +30,6 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
     private final CommandContext context;
     private final TrackScheduler scheduler;
 
-    private boolean first;
-
     public DefaultLoadResultHandler(final CommandContext context,
                                     final AudioController controller) {
         this.context = context;
@@ -42,11 +40,11 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
     public void trackLoaded(final AudioTrack track) {
         final AudioTrackInfo info = track.getInfo();
 
-        this.context.reply(String.format("`%s` has added `%s` to the queue", this.context.getUser().getAsTag(), info.title));
+        this.context.message(String.format("`%s` added `%s` to the song queue", this.context.getUser().getAsTag(), info.title)).deleteAfter(10, TimeUnit.SECONDS).send();
 
         this.scheduler.queue(track, false, this.context.getMember());
 
-        this.context.getMessage().delete().queue();
+        if (this.scheduler.getCurrentQueueMessageId() != -1) this.scheduler.sendCurrentQueue(this.context.getChannel(), 1, false);
     }
 
     @Override
@@ -55,14 +53,18 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
         if (!playlist.isSearchResult()) {
             if (playlist.getTracks().size() > 1) {
 
-                this.context.reply(String.format("%s has added %d songs to the queue",
-                        this.context.getUser().getAsTag(), playlist.getTracks().size()));
+                this.context.message(String.format("`%s` has added %d songs to the song queue",
+                        this.context.getUser().getAsTag(), playlist.getTracks().size())).deleteAfter(10, TimeUnit.SECONDS).send();
 
-                playlist.getTracks().forEach(track -> this.scheduler.queue(track, false, this.context.getMember()));
+                this.scheduler.queue(playlist.getTracks(), this.context.getMember().getUser().getAsTag());
 
-                this.context.getMessage().delete().queue();
-            } else if (playlist.getSelectedTrack() != null) {
-                this.trackLoaded(playlist.getSelectedTrack());
+                this.context.getMessage().delete().queue(null, __ -> {});
+            } else {
+                if (playlist.getSelectedTrack() != null) {
+                    this.trackLoaded(playlist.getSelectedTrack());
+                } else {
+                    this.trackLoaded(playlist.getTracks().get(0));
+                }
             }
         } else {
             this.createChoiceMenu(playlist.getTracks().subList(0, Math.min(playlist.getTracks().size(), 10) + 1));
@@ -71,12 +73,12 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
 
     @Override
     public void noMatches() {
-        this.context.reply("I'm sorry but I couldn't find any matches for that, try being more specific or use a URL");
+        this.context.message("Sorry but I couldn't find anything for that, try being more specific (e.g. giving a song author) or using a URL.").deleteAfter(10, TimeUnit.SECONDS).send();
     }
 
     @Override
     public void loadFailed(final FriendlyException ex) {
-        this.context.reply(String.format("I'm sorry but I ran into an error trying to load that song: %s", ex.getMessage()));
+        this.context.message(String.format("Sorry but I ran into an error trying to load that song: %s", ex.getMessage())).deleteAfter(10, TimeUnit.SECONDS).send();
     }
 
     /**
@@ -91,8 +93,9 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
 
         final StringJoiner joiner = new StringJoiner("\n");
 
-        joiner.add("Respond with the track ID to select the desired song");
+        joiner.add("Just type the number next to a track to add it to the queue");
         joiner.add("_ _");
+        joiner.add("Example: Type `1` for the first track, `2` for the second etc...");
 
         for (int i = 1; i < choices.size(); i++) {
 
@@ -119,11 +122,14 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
                     && event.getChannel().getIdLong() == this.context.getChannel().getIdLong()
                     && event.getMember().getIdLong() == this.context.getMember().getIdLong(), event -> {
 
+                event.getMessage().delete().queue(null, __ -> {});
+                message.delete().queue(null, __ -> {});
+
                 int choice;
                 try {
                     choice = Integer.parseInt(event.getMessage().getContentStripped());
                 } catch (final NumberFormatException ignored) {
-                    this.context.reply("The music choice has been cancelled");
+                    this.context.message("The music choice has been cancelled").deleteAfter(10, TimeUnit.SECONDS).send();
                     return true;
                 }
 
@@ -136,10 +142,8 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
 
                 this.trackLoaded(choices.get(--choice));
 
-                message.delete().queue();
-
                 return true;
-            }, 1, TimeUnit.MINUTES, () -> Messaging.message(this.context.getChannel(), "Your music choice has timed out").success((msg -> msg.delete().queueAfter(10, TimeUnit.SECONDS))).send());
+            }, 1, TimeUnit.MINUTES, () -> Messaging.message(this.context.getChannel(), "Your music choice has timed out").deleteAfter(10, TimeUnit.SECONDS).send());
 
             message.delete().queueAfter(1, TimeUnit.MINUTES, __ -> {},  __ -> {});
 
