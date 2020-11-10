@@ -7,6 +7,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import com.sheepybot.api.entities.command.CommandContext;
 import com.sheepybot.api.entities.messaging.Messaging;
+import net.dv8tion.jda.api.Permission;
 import net.tempobot.Main;
 import net.tempobot.music.audio.AudioController;
 import net.tempobot.music.audio.TrackScheduler;
@@ -58,7 +59,7 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
 
                 this.scheduler.queue(playlist.getTracks(), this.context.getMember().getUser().getAsTag());
 
-                this.context.getMessage().delete().queue(null, __ -> {});
+                if (this.context.getSelfMember().hasPermission(Permission.MESSAGE_MANAGE)) this.context.getMessage().delete().queue();
             } else {
                 if (playlist.getSelectedTrack() != null) {
                     this.trackLoaded(playlist.getSelectedTrack());
@@ -67,7 +68,7 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
                 }
             }
         } else {
-            this.createChoiceMenu(playlist.getTracks().subList(0, Math.min(playlist.getTracks().size(), 10) + 1));
+            this.createChoiceMenu(playlist.getTracks().subList(0, Math.min(playlist.getTracks().size(), 10)));
         }
     }
 
@@ -122,7 +123,7 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
                     && event.getChannel().getIdLong() == this.context.getChannel().getIdLong()
                     && event.getMember().getIdLong() == this.context.getMember().getIdLong(), event -> {
 
-                event.getMessage().delete().queue(null, __ -> {});
+                if (event.getGuild().getSelfMember().hasPermission(Permission.MESSAGE_MANAGE)) event.getMessage().delete().queue(null, __ -> {});
                 message.delete().queue(null, __ -> {});
 
                 int choice;

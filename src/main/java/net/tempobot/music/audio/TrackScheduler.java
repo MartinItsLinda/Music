@@ -16,7 +16,6 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.utils.MarkdownSanitizer;
-import net.dv8tion.jda.internal.entities.TextChannelImpl;
 import net.tempobot.Main;
 import net.tempobot.cache.GuildSettingsCache;
 import net.tempobot.guild.GuildSettings;
@@ -305,11 +304,9 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
         final TextChannel channel = this.controller.getJDA().getTextChannelById(this.controller.getTextChannelId());
         if (channel == null) return;
 
-        channel.deleteMessagesByIds(Lists.newArrayList(
-                Long.toString(this.currentSongMessageId.getAndSet(-1)),
-                Long.toString(this.currentQueueMessageId.getAndSet(-1)),
-                Long.toString(this.currentHistoryMessageId.getAndSet(-1)))
-        ).queue(null, __ -> {});
+        if (this.getCurrentSongMessageId() != -1) channel.deleteMessageById(this.getCurrentSongMessageId()).queue(null, __ -> {});
+        if (this.getCurrentQueueMessageId() != -1) channel.deleteMessageById(this.getCurrentQueueMessageId()).queue(null, __ -> {});
+        if (this.getCurrentHistoryMessageId() != -1) channel.deleteMessageById(this.getCurrentHistoryMessageId()).queue(null, __ -> {});
 
     }
 
@@ -422,8 +419,8 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
      * @param forceSend Whether to update an existing message or send a new one updating the old message ID with the new one.
      */
     public synchronized void sendCurrentHistory(@NotNull(value = "channel cannot be null") final TextChannel channel,
-                                   final int page,
-                                   final boolean forceSend) {
+                                                final int page,
+                                                final boolean forceSend) {
         Objects.checkArgument(page >= 1, "page cannot be less than 1");
 
         //basically a copy paste method of #sendCurrentQueue but a few textual changes
@@ -497,8 +494,8 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
      * @param forceSend Whether to update an existing message or send a new one updating the old message ID with the new one.
      */
     public synchronized void sendCurrentQueue(@NotNull(value = "channel cannot be null") final TextChannel channel,
-                                 final int page,
-                                 final boolean forceSend) {
+                                              final int page,
+                                              final boolean forceSend) {
         Objects.checkArgument(page >= 1, "page cannot be less than 1");
 
         final List<AudioTrack> queue = this.getQueue().stream().skip(((page - 1) * 10)).limit(10).collect(Collectors.toList());
@@ -571,7 +568,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
      * @param forceSend Whether to force sending a replacement message, otherwise this method will update the existing message.
      */
     public synchronized void sendCurrentSong(@NotNull(value = "channel cannot be null") final TextChannel channel,
-                                final boolean forceSend) {
+                                             final boolean forceSend) {
         if (this.player.getPlayingTrack() == null) {
             Messaging.message(channel, "Sorry but there's no music currently playing :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
@@ -715,7 +712,8 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
 
         this.controller.setPauseTime(-1);
 
-        if (this.getCurrentTrack() != null && this.getCurrentTrack().getIdentifier().equals(track.getIdentifier())) return;
+        if (this.getCurrentTrack() != null && this.getCurrentTrack().getIdentifier().equals(track.getIdentifier()))
+            return;
 
         LOGGER.info(String.format("Playing track %s with identifier %s!", track.getInfo().title, track.getIdentifier()));
 

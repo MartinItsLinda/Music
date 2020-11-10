@@ -5,6 +5,7 @@ import com.sheepybot.api.entities.command.CommandContext;
 import com.sheepybot.api.entities.command.CommandExecutor;
 import com.sheepybot.api.entities.command.parsers.ArgumentParsers;
 import com.sheepybot.api.entities.messaging.Messaging;
+import net.dv8tion.jda.api.Permission;
 import net.tempobot.Main;
 import net.tempobot.music.audio.AudioController;
 import net.tempobot.music.util.AudioUtils;
@@ -20,7 +21,7 @@ public class CommandVolume implements CommandExecutor {
     public void execute(final CommandContext context,
                         final Arguments args) {
 
-        context.getMessage().delete().queue();
+        if (context.getSelfMember().hasPermission(Permission.MESSAGE_MANAGE)) context.getMessage().delete().queue();
 
         final GuildVoiceState state = context.getMember().getVoiceState();
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());

@@ -25,7 +25,7 @@ import net.tempobot.music.event.GuildJoinLeaveListener;
 import net.tempobot.music.event.GuildMessageReactionListener;
 import net.tempobot.music.event.GuildVoiceListener;
 
-@ModuleData(name = "Music", version = "1.6.9")
+@ModuleData(name = "Music", version = "1.6.10")
 public class Main extends Module {
 
     private static Main instance;

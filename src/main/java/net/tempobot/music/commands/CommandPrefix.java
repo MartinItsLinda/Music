@@ -4,6 +4,7 @@ import com.sheepybot.api.entities.command.Arguments;
 import com.sheepybot.api.entities.command.CommandContext;
 import com.sheepybot.api.entities.command.CommandExecutor;
 import com.sheepybot.api.entities.command.parsers.ArgumentParsers;
+import net.dv8tion.jda.api.Permission;
 import net.tempobot.Main;
 import net.tempobot.cache.GuildSettingsCache;
 import net.tempobot.guild.GuildSettings;
@@ -16,7 +17,7 @@ public class CommandPrefix implements CommandExecutor {
     public void execute(final CommandContext context,
                         final Arguments args) {
 
-        context.getMessage().delete().queue();
+        if (context.getSelfMember().hasPermission(Permission.MESSAGE_MANAGE)) context.getMessage().delete().queue();
 
         final String prefix = args.next(ArgumentParsers.REMAINING_STRING_NO_QUOTE);
         final GuildSettings settings = GuildSettingsCache.get().getEntity(context.getGuild().getIdLong());
