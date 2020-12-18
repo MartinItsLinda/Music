@@ -34,14 +34,19 @@ public class GuildSettingsCache extends EntityLoadingCache<Long, GuildSettings> 
     private static final class GuildSettingsCacheLoader extends CacheLoader<Long, GuildSettings> {
 
         @Override
-        public GuildSettings load(@NotNull(value = "key cannot be null") final Long guildId) {
-
+        public GuildSettings load(@NotNull("key cannot be null") final Long guildId) {
             final Database db = Main.get().getDatabase();
 
-            final DBObject guild = db.findOne("SELECT `guild_id`, `guild_prefix`, `guild_premium`, UNIX_TIMESTAMP(`added_at`) `added_at` FROM `guilds` WHERE `guild_id` = ?", guildId);
+            final DBObject guild = db.findOne("SELECT `guild_id`, `guild_prefix`, `guild_premium`, `checking_duplicates`, `auto_announce`, `auto_delete`, `auto_search`, `auto_join`, `volume`, UNIX_TIMESTAMP(`added_at`) `added_at` FROM `guilds` WHERE `guild_id` = ?", guildId);
             final List<Long> djRoles = db.find("SELECT `role_id` FROM `guild_dj_roles` WHERE `guild_id` = ?", guildId).map(object -> object.getLong("role_id")).collect(Collectors.toList());
+            final List<Long> blockedTextChannels = db.find("SELECT `channel_id` FROM `guild_blocked_text_channels` WHERE `guild_id` = ?", guildId).map(object -> object.getLong("channel_id")).collect(Collectors.toList());
 
-            return new GuildSettings(guildId, guild.getString("guild_prefix"), guild.getBoolean("guild_premium"), djRoles, guild.getLong("added_at"));
+            return new GuildSettings(guildId, guild.getString("guild_prefix"),
+                    guild.getBoolean("guild_premium"), guild.getBoolean("checking_duplicates"),
+                    guild.getBoolean("auto_announce"), guild.getBoolean("auto_delete"),
+                    guild.getBoolean("auto_search"), true, //TODO: replace this with the value from the field once premium has been implemented
+                    guild.getInt("volume"), djRoles,
+                    blockedTextChannels, guild.getLong("added_at"));
         }
 
     }

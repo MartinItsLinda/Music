@@ -11,7 +11,7 @@ public class AutoQueueLoadResultHandler implements AudioLoadResultHandler {
 
     private final TrackScheduler scheduler;
     private final String data;
-    public AutoQueueLoadResultHandler(@NotNull(value = "scheduler cannot be null") final TrackScheduler scheduler,
+    public AutoQueueLoadResultHandler(@NotNull("scheduler cannot be null") final TrackScheduler scheduler,
                                       final String data) {
         this.scheduler = scheduler;
         this.data = data;

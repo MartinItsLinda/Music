@@ -12,6 +12,7 @@ import net.dv8tion.jda.api.Permission;
 import net.tempobot.Main;
 import net.tempobot.music.audio.AudioLoader;
 import net.tempobot.music.util.AudioUtils;
+import net.tempobot.music.util.MessageUtils;
 import net.tempobot.util.BotUtils;
 
 import java.awt.*;
@@ -23,8 +24,6 @@ public class CommandStats implements CommandExecutor {
     @Override
     public void execute(final CommandContext context,
                         final Arguments args) {
-
-        if (context.getSelfMember().hasPermission(Permission.MESSAGE_MANAGE)) context.getMessage().delete().queue();
 
         final AudioLoader loader = Main.get().getAudioLoader();
 
@@ -53,7 +52,7 @@ public class CommandStats implements CommandExecutor {
 
         builder.addField("Bot Uptime", AudioUtils.formatTrackLength((System.currentTimeMillis() - Bot.get().getStartTime()), false), true);
 
-        context.message(builder.build()).deleteAfter(15, TimeUnit.SECONDS).send();
+        MessageUtils.sendMessage(context.getGuild(), context.message(builder.build()));
 
     }
 

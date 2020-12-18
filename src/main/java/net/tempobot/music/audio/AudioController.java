@@ -1,5 +1,6 @@
 package net.tempobot.music.audio;
 
+import com.sedmelluq.discord.lavaplayer.filter.equalizer.Equalizer;
 import com.sedmelluq.discord.lavaplayer.filter.equalizer.EqualizerFactory;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
@@ -9,6 +10,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.VoiceChannel;
 import net.dv8tion.jda.api.exceptions.PermissionException;
+import net.tempobot.guild.GuildSettings;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,7 @@ public class AudioController {
     public AudioController(final AudioLoader loader,
                            final AudioPlayerManager audioPlayerManager,
                            final Guild guild,
+                           final GuildSettings settings,
                            final TextChannel textChannel,
                            final VoiceChannel voiceChannel) {
         this.loader = loader;
@@ -45,7 +48,7 @@ public class AudioController {
         this.textChannelId = new AtomicLong(textChannel.getIdLong());
         this.voiceChannelId = new AtomicLong(voiceChannel.getIdLong());
         this.audioPlayer = audioPlayerManager.createPlayer();
-        this.scheduler = new TrackScheduler(this, this.audioPlayer, guild.getJDA());
+        this.scheduler = new TrackScheduler(this, this.audioPlayer, settings, guild.getJDA());
         this.jda = guild.getJDA();
         this.equalizerFactory = new EqualizerFactory();
         this.audioPlayer.setFilterFactory(this.equalizerFactory);
@@ -90,7 +93,7 @@ public class AudioController {
     /**
      * @param channel The new channel to submit messages to
      */
-    public void setTextChannelId(@NotNull(value = "channel cannot be null") final TextChannel channel) {
+    public void setTextChannelId(@NotNull("channel cannot be null") final TextChannel channel) {
         this.textChannelId.set(channel.getIdLong());
     }
 
@@ -127,7 +130,7 @@ public class AudioController {
      *
      * @param channel The new {@link VoiceChannel}
      */
-    public void setVoiceChannelId(@NotNull(value = "channel cannot be null") final VoiceChannel channel) {
+    public void setVoiceChannelId(@NotNull("channel cannot be null") final VoiceChannel channel) {
         this.voiceChannelId.set(channel.getIdLong());
     }
 
@@ -177,7 +180,7 @@ public class AudioController {
      *
      * @throws IllegalArgumentException If the {@link VoiceChannel} doesn't belong in this {@link AudioController}s owning {@link Guild}
      */
-    public void connect(@NotNull(value = "channel cannot be null") final VoiceChannel channel) throws IllegalArgumentException, PermissionException {
+    public void connect(@NotNull("channel cannot be null") final VoiceChannel channel) throws IllegalArgumentException, PermissionException {
         if (!this.isValid()) {
             throw new IllegalArgumentException("Cannot connect to voice channel as this AudioController is no longer valid.");
         }
@@ -227,7 +230,7 @@ public class AudioController {
                 LOGGER.info(String.format("Couldn't retrieve guild %d from guild cache whilst attempting to disconnect Audio Manager", this.guildId));
             } else {
 
-                LOGGER.debug(String.format("Disconnecting Audio Controller from Guild %s", guild.getName()));
+                LOGGER.info(String.format("Disconnecting Audio Controller from Guild %s", guild.getName()));
 
                 this.audioPlayer.stopTrack();
                 this.voiceChannelId.set(-1);
@@ -252,11 +255,11 @@ public class AudioController {
             }
 
             try {
-                this.disconnect();
                 this.scheduler.saveTracks();
                 this.scheduler.clear();
                 this.scheduler.getUpdaterTask().cancel();
                 this.audioPlayer.destroy();
+                this.disconnect();
             } catch (final Throwable ex) {
                 LOGGER.info("An error occurred during destruction of AudioController for guild %s", ex);
             }

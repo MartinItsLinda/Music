@@ -8,10 +8,13 @@ import com.sheepybot.api.entities.command.CommandExecutor;
 import com.sheepybot.api.entities.command.parsers.ArgumentParsers;
 import net.dv8tion.jda.api.Permission;
 import net.tempobot.Main;
+import net.tempobot.cache.GuildSettingsCache;
+import net.tempobot.guild.GuildSettings;
 import net.tempobot.music.audio.AudioController;
 import net.tempobot.music.audio.TrackScheduler;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
+import net.tempobot.music.util.MessageUtils;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -23,18 +26,16 @@ public class CommandRemove implements CommandExecutor {
     public void execute(final CommandContext context, 
                         final Arguments args) {
 
-        if (context.getSelfMember().hasPermission(Permission.MESSAGE_MANAGE)) context.getMessage().delete().queue();
-
         final GuildVoiceState state = context.getMember().getVoiceState();
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());
         if (state == null || state.getChannel() == null || controller == null || controller.getVoiceChannelId() != state.getChannel().getIdLong()) {
-            context.message("Sorry but you've gotta be in the same voice channel as me to use this. :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
+            MessageUtils.sendMessage(context.getGuild(), context.message("Sorry but you've gotta be in the same voice channel as me to use this. :frowning:"));
         } else {
             final TrackScheduler scheduler = controller.getTrackScheduler();
             if (scheduler.getPlayer().getPlayingTrack() == null) {
-                context.message("Sorry but there's no music currently playing :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
+                MessageUtils.sendMessage(context.getGuild(), context.message("Sorry but there's no music currently playing :frowning:"));
             } if (!(scheduler.isDJ(context.getMember()))) {
-                context.message("You must be either alone, have a role called DJ or be an admin to do this.").deleteAfter(10, TimeUnit.SECONDS).send();
+                MessageUtils.sendMessage(context.getGuild(), context.message("You must be either alone, have a role called DJ or be an admin to do this."));
             } else {
                 final List<AudioTrack> queue = (LinkedList<AudioTrack>) scheduler.getQueue();
 
@@ -45,21 +46,21 @@ public class CommandRemove implements CommandExecutor {
 
                     queue.removeIf(track -> track.getUserData() != null && track.getUserData().equals(tag));
 
-                    context.message("I've removed all tracks requested by " + member.getAsMention()).deleteAfter(10, TimeUnit.SECONDS).send();
+                    MessageUtils.sendMessage(context.getGuild(), context.message("I've removed all tracks requested by " + member.getAsMention()));
 
                 } else {
 
                     int position = args.next(ArgumentParsers.INTEGER);
 
                     if (position <= 0 || position > queue.size()) {
-                        context.message("Please give a track number between 1 and " + queue.size()).deleteAfter(10, TimeUnit.SECONDS).send();
+                        MessageUtils.sendMessage(context.getGuild(), context.message("Please give a track number between 1 and " + queue.size()));
                     } else {
                         final AudioTrack track = queue.get(--position);
                         final AudioTrackInfo info = track.getInfo();
 
                         queue.remove(position);
 
-                        context.message("I've removed " + info.title + " by " + info.author + " from the queue").deleteAfter(10, TimeUnit.SECONDS).send();
+                        MessageUtils.sendMessage(context.getGuild(), context.message("I've removed " + info.title + " by " + info.author + " from the queue"));
                     }
 
                 }

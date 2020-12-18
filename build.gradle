@@ -5,7 +5,6 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
-mainClassName = 'net.tempobot'
 version = '1.0'
 
 sourceCompatibility = 1.8
@@ -14,16 +13,19 @@ repositories {
     mavenCentral()
     jcenter()
     maven { url 'https://jitpack.io' }
+    maven { url 'https://dl.bintray.com/sedmelluq/com.sedmelluq' }
 }
 
 dependencies {
-    compileOnly group: 'com.sheepybot', name: 'API', version: '9fef7e1b0e'
+    compileOnly group: 'com.sheepybot', name: 'API', version: '508a216add'
     compileOnly group: 'com.google.guava', name: 'guava', version: '23.0'
     implementation group: 'commons-validator', name: 'commons-validator', version: '1.6'
+    implementation group: 'com.sedmelluq', name: 'lavaplayer-ext-youtube-rotator', version: '0.2.3'
 }
 
 shadowJar {
     archiveFileName = 'Music.jar'
+    mainClassName = 'net.tempobot'
 }
 
 compileJava.options.encoding = 'UTF-8'

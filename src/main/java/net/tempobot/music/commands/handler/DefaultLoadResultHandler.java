@@ -9,12 +9,15 @@ import com.sheepybot.api.entities.command.CommandContext;
 import com.sheepybot.api.entities.messaging.Messaging;
 import net.dv8tion.jda.api.Permission;
 import net.tempobot.Main;
+import net.tempobot.cache.GuildSettingsCache;
+import net.tempobot.guild.GuildSettings;
 import net.tempobot.music.audio.AudioController;
 import net.tempobot.music.audio.TrackScheduler;
 import net.tempobot.music.util.AudioUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.utils.MarkdownSanitizer;
+import net.tempobot.music.util.MessageUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,18 +33,20 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
 
     private final CommandContext context;
     private final TrackScheduler scheduler;
+    private final GuildSettings settings;
 
     public DefaultLoadResultHandler(final CommandContext context,
                                     final AudioController controller) {
         this.context = context;
         this.scheduler = controller.getTrackScheduler();
+        this.settings = GuildSettingsCache.get().getEntity(context.getGuild().getIdLong());
     }
 
     @Override
     public void trackLoaded(final AudioTrack track) {
         final AudioTrackInfo info = track.getInfo();
 
-        this.context.message(String.format("`%s` added `%s` to the song queue", this.context.getUser().getAsTag(), info.title)).deleteAfter(10, TimeUnit.SECONDS).send();
+        MessageUtils.sendMessage(context.getGuild(), this.context.message(String.format("`%s` added `%s` to the song queue", this.context.getUser().getAsTag(), info.title)));
 
         this.scheduler.queue(track, false, this.context.getMember());
 
@@ -54,12 +59,9 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
         if (!playlist.isSearchResult()) {
             if (playlist.getTracks().size() > 1) {
 
-                this.context.message(String.format("`%s` has added %d songs to the song queue",
-                        this.context.getUser().getAsTag(), playlist.getTracks().size())).deleteAfter(10, TimeUnit.SECONDS).send();
+                MessageUtils.sendMessage(this.context.getGuild(), this.context.message(String.format("`%s` has added %d songs to the song queue", this.context.getUser().getAsTag(), playlist.getTracks().size())));
 
                 this.scheduler.queue(playlist.getTracks(), this.context.getMember().getUser().getAsTag());
-
-                if (this.context.getSelfMember().hasPermission(Permission.MESSAGE_MANAGE)) this.context.getMessage().delete().queue();
             } else {
                 if (playlist.getSelectedTrack() != null) {
                     this.trackLoaded(playlist.getSelectedTrack());
@@ -68,18 +70,22 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
                 }
             }
         } else {
-            this.createChoiceMenu(playlist.getTracks().subList(0, Math.min(playlist.getTracks().size(), 10)));
+            if (!this.settings.isAutoSearch()) {
+                this.createChoiceMenu(playlist.getTracks().subList(0, Math.min(playlist.getTracks().size(), 10)));
+            } else {
+                this.trackLoaded(playlist.getTracks().get(0));
+            }
         }
     }
 
     @Override
     public void noMatches() {
-        this.context.message("Sorry but I couldn't find anything for that, try being more specific (e.g. giving a song author) or using a URL.").deleteAfter(10, TimeUnit.SECONDS).send();
+        MessageUtils.sendMessage(this.context.getGuild(), this.context.message("Sorry but I couldn't find anything for that, try being more specific (e.g. giving a song author) or using a URL."));
     }
 
     @Override
     public void loadFailed(final FriendlyException ex) {
-        this.context.message(String.format("Sorry but I ran into an error trying to load that song: %s", ex.getMessage())).deleteAfter(10, TimeUnit.SECONDS).send();
+        MessageUtils.sendMessage(this.context.getGuild(), this.context.message(String.format("Sorry but I ran into an error trying to load that song: %s", ex.getMessage())));
     }
 
     /**
@@ -88,7 +94,7 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
      *
      * @param choices The {@link List} of {@link AudioTrack}s to choose from
      */
-    private void createChoiceMenu(@NotNull(value = "choices cannot be null") final List<AudioTrack> choices) {
+    private void createChoiceMenu(@NotNull("choices cannot be null") final List<AudioTrack> choices) {
 
         final EmbedBuilder builder = Messaging.getLocalEmbedBuilder();
 
@@ -130,7 +136,7 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
                 try {
                     choice = Integer.parseInt(event.getMessage().getContentStripped());
                 } catch (final NumberFormatException ignored) {
-                    this.context.message("The music choice has been cancelled").deleteAfter(10, TimeUnit.SECONDS).send();
+                    MessageUtils.sendMessage(context.getGuild(), this.context.message("The music choice has been cancelled"));
                     return true;
                 }
 
@@ -144,7 +150,7 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
                 this.trackLoaded(choices.get(--choice));
 
                 return true;
-            }, 1, TimeUnit.MINUTES, () -> Messaging.message(this.context.getChannel(), "Your music choice has timed out").deleteAfter(10, TimeUnit.SECONDS).send());
+            }, 1, TimeUnit.MINUTES, () -> MessageUtils.sendMessage(this.context.getGuild(), this.context.message("Your music choice has timed out")));
 
             message.delete().queueAfter(1, TimeUnit.MINUTES, __ -> {},  __ -> {});
 

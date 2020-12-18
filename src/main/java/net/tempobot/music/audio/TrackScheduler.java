@@ -1,6 +1,7 @@
 package net.tempobot.music.audio;
 
 import com.google.common.collect.Lists;
+import com.sedmelluq.discord.lavaplayer.filter.FloatPcmAudioFilter;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
@@ -65,6 +66,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
 
     private final AudioController controller;
     private final AudioPlayer player;
+    private final GuildSettings settings;
     private final Deque<AudioTrack> queue;
     private final Deque<AudioTrack> trackHistory;
     private final Set<Long> voteSkips;
@@ -75,17 +77,20 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
     private boolean looping;
     private boolean autoplay;
     private boolean constantPlaying;
-    private AudioTrack current;
     private AudioTrack previous;
 
     private final AtomicLong currentSongMessageId = new AtomicLong(-1);
     private final AtomicLong currentQueueMessageId = new AtomicLong(-1);
     private final AtomicLong currentHistoryMessageId = new AtomicLong(-1);
 
-    public TrackScheduler(final AudioController controller, final AudioPlayer player, final JDA jda) {
+    public TrackScheduler(final AudioController controller,
+                          final AudioPlayer player,
+                          final GuildSettings settings,
+                          final JDA jda) {
         this.controller = controller;
         this.player = player;
-        this.player.setVolume(80);
+        this.player.setVolume(settings.getVolume());
+        this.settings = settings;
         this.jda = jda;
         this.queue = new LinkedList<>();
         this.trackHistory = Lists.newLinkedList();
@@ -113,7 +118,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
      * or {@code null} if there is no audio track playing
      */
     public AudioTrack getCurrentTrack() {
-        return this.current;
+        return this.player.getPlayingTrack();
     }
 
     /**
@@ -238,7 +243,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
      * @param tracks The {@link AudioTrack}s to enqueue
      * @param data   The data associated with the tracks (may be null)
      */
-    public synchronized void queue(@NotNull(value = "tracks cannot be null") final List<AudioTrack> tracks,
+    public synchronized void queue(@NotNull("tracks cannot be null") final List<AudioTrack> tracks,
                                    final Object data) {
         tracks.forEach(track -> this.queue(track, false, data));
     }
@@ -295,7 +300,6 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
 
         this.queue.clear();
         this.voteSkips.clear();
-        this.current = null;
         this.previous = null;
         this.looping = false;
         this.repeating = false;
@@ -304,9 +308,24 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
         final TextChannel channel = this.controller.getJDA().getTextChannelById(this.controller.getTextChannelId());
         if (channel == null) return;
 
-        if (this.getCurrentSongMessageId() != -1) channel.deleteMessageById(this.getCurrentSongMessageId()).queue(null, __ -> {});
-        if (this.getCurrentQueueMessageId() != -1) channel.deleteMessageById(this.getCurrentQueueMessageId()).queue(null, __ -> {});
-        if (this.getCurrentHistoryMessageId() != -1) channel.deleteMessageById(this.getCurrentHistoryMessageId()).queue(null, __ -> {});
+        if (this.settings.isAutoDelete()) {
+
+            final List<String> messageIds = new ArrayList<>(3);
+
+            if (this.getCurrentSongMessageId() != -1) messageIds.add(this.getCurrentSongMessageId() + "");
+            if (this.getCurrentQueueMessageId() != -1) messageIds.add(this.getCurrentQueueMessageId() + "");
+            if (this.getCurrentHistoryMessageId() != -1) messageIds.add(this.getCurrentHistoryMessageId() + "");
+
+            //i have to do this because discord get upset if i dont use the bulk delete endpoint
+            if (!messageIds.isEmpty()) {
+                if (messageIds.size() == 1) {
+                    channel.deleteMessageById(messageIds.get(0)).queue(null, __ -> {});
+                } else {
+                    channel.deleteMessagesByIds(messageIds).queue(null, __ -> {});
+                }
+            }
+
+        }
 
     }
 
@@ -381,19 +400,19 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
             LOGGER.info("Track next has been forced, ignoring track repeat");
             track = this.queue.poll();
             this.setRepeating(false);
-        } else if (this.isRepeating() && this.current != null) {
+        } else if (this.isRepeating() && this.previous != null) {
             LOGGER.info("Current track is repeating, returning a clone of the current track");
-            track = this.current;
+            track = this.previous;
         } else {
             track = this.queue.poll();
         }
 
-        if (this.isLooping() && this.current != null) {
+        if (this.isLooping() && this.previous != null) {
             LOGGER.info("Audio queue looping is enabled, adding the last played song to the end of the queue...");
             if (track == null) {
-                track = this.current;
+                track = this.previous;
             } else {
-                this.queue.offer(this.current);
+                this.queue.offer(this.previous);
             }
         }
 
@@ -418,7 +437,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
      * @param page      The page to start at (pages are in multiples of 10 and start at 1).
      * @param forceSend Whether to update an existing message or send a new one updating the old message ID with the new one.
      */
-    public synchronized void sendCurrentHistory(@NotNull(value = "channel cannot be null") final TextChannel channel,
+    public synchronized void sendCurrentHistory(@NotNull("channel cannot be null") final TextChannel channel,
                                                 final int page,
                                                 final boolean forceSend) {
         Objects.checkArgument(page >= 1, "page cannot be less than 1");
@@ -493,7 +512,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
      * @param page      The page to start at (pages are in multiples of 10 and start at 1).
      * @param forceSend Whether to update an existing message or send a new one updating the old message ID with the new one.
      */
-    public synchronized void sendCurrentQueue(@NotNull(value = "channel cannot be null") final TextChannel channel,
+    public synchronized void sendCurrentQueue(@NotNull("channel cannot be null") final TextChannel channel,
                                               final int page,
                                               final boolean forceSend) {
         Objects.checkArgument(page >= 1, "page cannot be less than 1");
@@ -531,7 +550,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
             final AudioTrack track = iterator.next();
             final AudioTrackInfo info = track.getInfo();
 
-            joiner.add(String.format("%d - [%s](%s) requested by `%s`\n", position, MarkdownSanitizer.sanitize(info.title.substring(0, Math.min(info.title.length(), 20)).replaceAll("[()]", "")), info.uri, track.getUserData()));
+            joiner.add(String.format("%d - [%s](%s) requested by `%s`\n", position, MarkdownSanitizer.sanitize(info.title.substring(0, Math.min(info.title.length(), 15)).replaceAll("[()]", "")), info.uri, track.getUserData()));
 
         }
 
@@ -567,19 +586,22 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
      * @param channel   The {@link TextChannel}
      * @param forceSend Whether to force sending a replacement message, otherwise this method will update the existing message.
      */
-    public synchronized void sendCurrentSong(@NotNull(value = "channel cannot be null") final TextChannel channel,
+    public synchronized void sendCurrentSong(@NotNull("channel cannot be null") final TextChannel channel,
+                                             final AudioTrack track,
                                              final boolean forceSend) {
-        if (this.player.getPlayingTrack() == null) {
+        LOGGER.info("SEND CURRENT SONG");
+        LOGGER.info("channel="+channel.getName()+",track null="+(track == null)+",force="+forceSend);
+        if (track == null) {
             Messaging.message(channel, "Sorry but there's no music currently playing :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
 
-            final AudioTrackInfo info = this.player.getPlayingTrack().getInfo();
+            final AudioTrackInfo info = track.getInfo();
 
             final EmbedBuilder builder = new EmbedBuilder();
 
             builder.setColor(Color.MAGENTA);
 
-            final Object userData = this.current.getUserData();
+            final Object userData = track.getUserData();
 
             builder.addField("Requester", userData == null ? "YouTube Auto Play" : userData.toString(), true);
             builder.addField("Author", info.author, true);
@@ -601,24 +623,26 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
             final long trackPosition = this.controller.getPlayer().getPlayingTrack().getPosition();
 
             final String position = AudioUtils.formatTrackLength(trackPosition);
-            final String duration = AudioUtils.formatTrackLength(current.getDuration());
+            final String duration = AudioUtils.formatTrackLength(track.getDuration());
 
             final String trackProgress = info.isStream ? "STREAM" : position + " / " + duration;
 
             builder.addField("Volume", this.player.getVolume() + "/150", true);
 
-            builder.setDescription(AudioUtils.formatProgressBar(trackPosition, current.getDuration()) + " " + trackProgress);
+            builder.setDescription(AudioUtils.formatProgressBar(trackPosition, track.getDuration()) + " " + trackProgress);
 
             builder.setFooter("Use the reactions below to control the music.");
 
             final Consumer<Message> addReactions = (message) -> {
-                message.addReaction(Characters.TRACK_PREVIOUS).queue();
-                message.addReaction(Characters.PLAY_PAUSE).queue();
-                message.addReaction(Characters.TRACK_NEXT).queue();
-                message.addReaction(Characters.STOP_PLAYING).queue();
-                message.addReaction(Characters.LOOP).queue();
-                message.addReaction(Characters.REPEAT).queue();
-//                message.addReaction(Characters.AUTOPLAY).queue();
+                if (channel.getGuild().getSelfMember().hasPermission(Permission.MESSAGE_EXT_EMOJI)) {
+                    message.addReaction(Characters.TRACK_PREVIOUS).queue(null, __ -> {});
+                    message.addReaction(Characters.PLAY_PAUSE).queue(null, __ -> {});
+                    message.addReaction(Characters.TRACK_NEXT).queue(null, __ -> {});
+                    message.addReaction(Characters.STOP_PLAYING).queue(null, __ -> {});
+                    message.addReaction(Characters.LOOP).queue(null, __ -> {});
+                    message.addReaction(Characters.REPEAT).queue(null, __ -> {});
+//                    message.addReaction(Characters.AUTOPLAY).queue();
+                }
 
                 this.currentSongMessageId.set(message.getIdLong());
                 this.controller.setTextChannelId(channel);
@@ -634,9 +658,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
                 channel.sendMessage(builder.build()).queue(addReactions);
 
             } else {
-
                 channel.retrieveMessageById(this.currentSongMessageId.get()).queue(message -> message.editMessage(builder.build()).queue(null, __ -> channel.sendMessage(builder.build()).queue(addReactions)), (ex) -> channel.sendMessage(builder.build()).queue(addReactions));
-
             }
 
         }
@@ -653,11 +675,13 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
 
         final Database database = Main.get().getDatabase();
 
+        if (this.player.getPlayingTrack() != null) {
+            this.trackHistory.add(this.player.getPlayingTrack());
+        }
+
         for (final AudioTrack track : this.trackHistory) {
 
             final AudioTrackInfo info = track.getInfo();
-
-            if (!track.isSeekable() || info.isStream || info.author == null || info.author.isEmpty()) continue;
 
             database.execute("INSERT INTO `guild_track_history`(`guild_id`, `track_name`, `track_author`, `track_url`, `member`) VALUES(?, ?, ?, ?, ?);",
                     this.controller.getGuildId(), info.title, info.author, info.uri, track.getUserData().toString());
@@ -693,11 +717,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
     public void onTrackEnd(final AudioPlayer player, final AudioTrack track, final AudioTrackEndReason reason) {
         LOGGER.info(String.format("Finished playing song %s video url %s in guild %s", track.getInfo().title, track.getInfo().uri, this.jda.getGuildById(this.controller.getGuildId()).getName()));
 
-        this.previous = this.current;
-
-        if (!this.isRepeating() && !this.isAutoplay()) {
-            this.current = null;
-        }
+        this.previous = track;
 
         if (reason.mayStartNext) {
             this.next(false);
@@ -712,30 +732,20 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
 
         this.controller.setPauseTime(-1);
 
-        if (this.getCurrentTrack() != null && this.getCurrentTrack().getIdentifier().equals(track.getIdentifier()))
-            return;
-
         LOGGER.info(String.format("Playing track %s with identifier %s!", track.getInfo().title, track.getIdentifier()));
 
-        this.current = track;
+        if (this.settings.isAutoAnnounce()) {
+            LOGGER.info("IS AUTO ANNOUNCE");
+            final TextChannel channel = this.jda.getTextChannelById(this.controller.getTextChannelId());
+            if (channel == null) return;
 
-        final TextChannel channel = this.jda.getTextChannelById(this.controller.getTextChannelId());
-        if (channel == null) return;
-
-        this.sendCurrentSong(channel, false);
-
-        final AudioTrackInfo info = this.current.getInfo();
-
-        LOGGER.info(String.format("Started playing song %s video url %s in guild %s", info.title, info.uri, channel.getGuild().getName()));
+            this.sendCurrentSong(channel, track, false);
+        }
     }
 
     @Override
     public void onTrackException(final AudioPlayer player, final AudioTrack track, final FriendlyException exception) {
         LOGGER.info("An error occurred on track '" + track.getInfo().uri + "'", exception);
-
-//        Metrics.MUSIC.inc("trackPlayFailures");
-
-        this.current = null;
 
         this.controller.setPauseTime(-1);
         this.setRepeating(false);
@@ -761,7 +771,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
      * @return {@code true} if the {@link Member} is either the owner of the {@link net.dv8tion.jda.api.entities.Guild}
      * or if they have the DJ role, {@code false} otherwise
      */
-    public boolean isDJ(@NotNull(value = "member cannot be null") final Member member) {
+    public boolean isDJ(@NotNull("member cannot be null") final Member member) {
         if (member.isOwner() || member.getVoiceState().getChannel().getMembers().stream().filter(mem -> !mem.getUser().isBot()).count() == 1) {
             return true;
         } else {
@@ -769,7 +779,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
             if (!settings.getDjRoles().isEmpty()) {
                 return !Collections.disjoint(member.getRoles().stream().map(Role::getIdLong).collect(Collectors.toList()), settings.getDjRoles());
             } else {
-                return member.isOwner() || member.hasPermission(Permission.ADMINISTRATOR) || member.getRoles().stream().anyMatch(role -> role.getName().equalsIgnoreCase("DJ"));
+                return member.hasPermission(Permission.ADMINISTRATOR) || member.getRoles().stream().anyMatch(role -> role.getName().equalsIgnoreCase("DJ"));
             }
         }
     }
@@ -785,8 +795,8 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
         @Override
         public void run() {
 
-            final AudioTrack track = this.scheduler.player.getPlayingTrack();
-            if (track != null && this.scheduler.getCurrentSongMessageId() != -1 && !this.scheduler.controller.isPaused()) {
+            final AudioTrack track = this.scheduler.getCurrentTrack();
+            if (track != null && this.scheduler.getCurrentSongMessageId() != -1 && !this.scheduler.controller.isPaused() && this.scheduler.settings.isAutoAnnounce()) {
 
                 final Guild guild = this.scheduler.jda.getGuildById(this.scheduler.controller.getGuildId());
                 if (guild == null) {
@@ -797,7 +807,7 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
                 final TextChannel channel = guild.getTextChannelById(this.scheduler.controller.getTextChannelId());
                 if (channel == null) return;
 
-                sendCurrentSong(channel, false);
+                sendCurrentSong(channel, track, false);
 
             }
 

@@ -4,10 +4,11 @@ import com.sedmelluq.discord.lavaplayer.player.AudioConfiguration;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackState;
 import com.sheepybot.api.entities.messaging.Messaging;
-import net.tempobot.Main;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.VoiceChannel;
+import net.tempobot.Main;
+import net.tempobot.cache.GuildSettingsCache;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,13 +55,12 @@ public class AudioLoader {
      * @param guild        The owning {@link Guild} of the {@link AudioController}
      * @param textChannel  The {@link TextChannel} to submit messages
      * @param voiceChannel The {@link VoiceChannel} to run music in
-     *
      * @return An {@link AudioController} for the specified {@link Guild}
      */
     public AudioController getOrCreate(final Guild guild,
                                        final TextChannel textChannel,
                                        final VoiceChannel voiceChannel) {
-        return this.controllers.computeIfAbsent(guild.getIdLong(), k -> new AudioController(this, this.audioPlayerManager, guild, textChannel, voiceChannel));
+        return this.controllers.computeIfAbsent(guild.getIdLong(), k -> new AudioController(this, this.audioPlayerManager, guild, GuildSettingsCache.get().getEntity(guild.getIdLong()), textChannel, voiceChannel));
     }
 
     /**
@@ -102,8 +102,11 @@ public class AudioLoader {
      * @param saveQueues Whether to save queues to the database
      */
     public void shutdown(final boolean saveQueues) {
-        this.controllers.values().forEach(controller -> controller.destroy(saveQueues));
-        this.controllers.clear();
+        this.controllers.entrySet().removeIf(entry ->  {
+            final AudioController controller = entry.getValue();
+            controller.destroy(saveQueues);
+            return true;
+        });
     }
 
     private static class AudioLoaderCleanupTask implements Runnable {
@@ -112,7 +115,7 @@ public class AudioLoader {
 
         private final AudioLoader audioLoader;
 
-        AudioLoaderCleanupTask(@NotNull(value = "audioLoader cannot be null") final AudioLoader audioLoader) {
+        AudioLoaderCleanupTask(@NotNull("audioLoader cannot be null") final AudioLoader audioLoader) {
             this.audioLoader = audioLoader;
         }
 
@@ -121,8 +124,11 @@ public class AudioLoader {
 
             LOGGER.info("Cleaning up expired AudioControllers (> 15 min waiting)");
 
-            this.audioLoader.controllers.values().removeIf(controller -> {
-                if (!controller.isValid() || controller.getTimeLastPlayed() != -1 && (System.currentTimeMillis() - controller.getTimeLastPlayed()) >= TimeUnit.MINUTES.toMillis(15)) {
+            this.audioLoader.controllers.entrySet().removeIf(entry -> {
+                final AudioController controller = entry.getValue();
+                if (!controller.isValid()) {
+                    return true;
+                } else if (controller.getTimeLastPlayed() != -1 && (System.currentTimeMillis() - controller.getTimeLastPlayed()) >= TimeUnit.MINUTES.toMillis(15)) {
 
                     final TextChannel channel = controller.getJDA().getTextChannelById(controller.getTextChannelId());
                     if (channel != null) {

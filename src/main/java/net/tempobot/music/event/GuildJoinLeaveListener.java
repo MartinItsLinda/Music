@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.tempobot.Main;
+import net.tempobot.guild.GuildSettings;
 import net.tempobot.task.QueueLoaderTask;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,7 +21,7 @@ public class GuildJoinLeaveListener implements EventListener {
         final Guild guild = event.getGuild();
 
         if (!this.addGuild(guild)) {
-            Main.get().getScheduler().runTaskLater(new QueueLoaderTask(guild.getIdLong(), event.getJDA()), 1L);
+            Main.get().getScheduler().runTask(new QueueLoaderTask(guild.getIdLong(), event.getJDA()));
         }
 
     }
@@ -41,7 +42,7 @@ public class GuildJoinLeaveListener implements EventListener {
     }
 
     //returns true if the guild is a new guild and an entry was created, otherwise it's false
-    private boolean addGuild(@NotNull(value = "guild cannot be null") final Guild guild) {
+    private boolean addGuild(@NotNull("guild cannot be null") final Guild guild) {
 
         final Database database = Main.get().getDatabase();
 

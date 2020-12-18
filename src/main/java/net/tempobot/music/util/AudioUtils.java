@@ -94,18 +94,20 @@ public class AudioUtils {
             }
         }
 
-        final int seconds = (int) (millis / 1000);
-        final long hours = TimeUnit.SECONDS.toHours(seconds);
-        final long mins = TimeUnit.SECONDS.toMinutes(seconds) - (TimeUnit.SECONDS.toHours(seconds) * 60);
-        final long secs = TimeUnit.SECONDS.toSeconds(seconds) - (TimeUnit.SECONDS.toMinutes(seconds) * 60);
+        final long years = millis / 31104000000L;
+        final long months = millis / 2592000000L % 12;
+        final long days = millis / 86400000L % 30;
+        final long hours = millis / 3600000L % 24;
+        final long mins = millis / 60000L % 60;
+        final long secs = millis / 1000L % 60;
 
         String formatted = "";
-
         if (shortened) {
+
             //short format = e.g. 01:02:03 (hours, minutes and seconds)
             //we append 0 before the number if its less than 10 so it looks nicer, 01:02:03 looks nicer than 1:2:3
             if (hours > 0) {
-                formatted = (hours < 10 ? "0" : "") + hours + (mins > 0 ? "" : ":00") + (secs > 0 ? "" : ":00");
+                formatted += (hours < 10 ? "0" : "") + hours + (mins > 0 ? "" : ":00") + (secs > 0 ? "" : ":00");
             }
 
             if (mins > 0) {
@@ -113,18 +115,33 @@ public class AudioUtils {
             }
 
             formatted += (mins > 0 ? ":" : "00:") + (secs < 10 ? "0" : "") + secs;
+
         } else {
-            //long format = e.g. 4 hours, 2 minutes and 3 seconds (or second if it's 1...just an aesthetics change)
+
+            //long format = e.g. 1 day, 4 hours, 2 minutes and 3 seconds (or second if it's 1...just an aesthetics change)
+
+            if (years > 0) {
+                formatted += years + " year" + (years > 1 ? "s" : "");
+            }
+
+            if (months > 0) {
+                formatted += (years > 0 ? ", " : "") + months + " month" + (months > 1 ? "s" : "");
+            }
+
+            if (days > 0) {
+                formatted += (years > 0 || months > 0 ? ", " : "") + days + " day" + (days > 1 ? "s" : "");
+            }
+
             if (hours > 0) {
-                formatted += hours + " hour" + (hours > 1 ? "s" : "");
+                formatted += (years > 0 || months > 0 || days > 0 ? ", " : "") + hours + " hour" + (hours > 1 ? "s" : "");
             }
 
             if (mins > 0) {
-                formatted += (hours > 0 ? ", " : "") + mins + " minute" + (mins > 1 ? "s" : "");
+                formatted += (years > 0 || months > 0 || days > 0 || hours > 0 ? ", " : "") + mins + " minute" + (mins > 1 ? "s" : "");
             }
 
             if (secs > 0) {
-                formatted += (hours > 0 || mins > 0 ? " and " : "") + secs + " second" + (seconds != 1 ? "s" : "");
+                formatted += (years > 0 || months > 0 || days > 0 || hours > 0 || mins > 0 ? " and " : "") + secs + " second" + (secs > 1 ? "s" : "");
             }
 
         }

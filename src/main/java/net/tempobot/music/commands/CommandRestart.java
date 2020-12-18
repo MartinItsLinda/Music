@@ -5,7 +5,10 @@ import com.sheepybot.api.entities.command.CommandContext;
 import com.sheepybot.api.entities.command.CommandExecutor;
 import net.dv8tion.jda.api.Permission;
 import net.tempobot.Main;
+import net.tempobot.cache.GuildSettingsCache;
+import net.tempobot.guild.GuildSettings;
 import net.tempobot.music.audio.AudioController;
+import net.tempobot.music.util.MessageUtils;
 
 import java.util.concurrent.TimeUnit;
 
@@ -15,15 +18,13 @@ public class CommandRestart implements CommandExecutor {
     public void execute(final CommandContext context, 
                         final Arguments args) {
 
-        if (context.getSelfMember().hasPermission(Permission.MESSAGE_MANAGE)) context.getMessage().delete().queue();
-
         final AudioController controller = Main.get().getAudioLoader().getController(context.getGuild());
         if (controller == null || controller.getPlayer().getPlayingTrack() == null) {
-            context.message("Sorry but there's no music currently playing :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
+            MessageUtils.sendMessage(context.getGuild(), context.message("Sorry but there's no music currently playing :frowning:"));
         } else {
             controller.getPlayer().getPlayingTrack().setPosition(0);
 
-            context.message("Back to the beginning we go.").deleteAfter(10, TimeUnit.SECONDS);
+            MessageUtils.sendMessage(context.getGuild(), context.message("Back to the beginning we go."));
         }
         
     }
