@@ -589,8 +589,6 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
     public synchronized void sendCurrentSong(@NotNull("channel cannot be null") final TextChannel channel,
                                              final AudioTrack track,
                                              final boolean forceSend) {
-        LOGGER.info("SEND CURRENT SONG");
-        LOGGER.info("channel="+channel.getName()+",track null="+(track == null)+",force="+forceSend);
         if (track == null) {
             Messaging.message(channel, "Sorry but there's no music currently playing :frowning:").deleteAfter(10, TimeUnit.SECONDS).send();
         } else {
@@ -735,7 +733,6 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
         LOGGER.info(String.format("Playing track %s with identifier %s!", track.getInfo().title, track.getIdentifier()));
 
         if (this.settings.isAutoAnnounce()) {
-            LOGGER.info("IS AUTO ANNOUNCE");
             final TextChannel channel = this.jda.getTextChannelById(this.controller.getTextChannelId());
             if (channel == null) return;
 

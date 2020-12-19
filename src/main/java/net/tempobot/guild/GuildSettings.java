@@ -31,7 +31,7 @@ public class GuildSettings {
                          final boolean autoJoin,
                          final int volume,
                          @NotNull("dj roles cannot be null") final List<Long> djRoles,
-                         @NotNull("dj roles cannot be null") final List<Long> blockedTextChannels,
+                         @NotNull("blocked text channels cannot be null") final List<Long> blockedTextChannels,
                          final long addedAt) {
         Objects.checkArgument(prefix.length() >= 1 && prefix.length() <= 5, "prefix must be between 1 and 5 in length");
         this.guildId = guildId;

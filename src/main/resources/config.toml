@@ -1,2 +1,17 @@
 use-ipv6-rotation = false
 ipv6-block = ""
+
+[spotify]
+client-id = "CLIENT_ID_HERE"
+client-secret = "CLIENT_SECRET_HERE"
+
+[source-managers]
+youtube = true
+soundcloud = true
+bandcamp = true
+vimeo = true
+twitch = true
+beam = true
+spotify = false
+local = false
+http = false

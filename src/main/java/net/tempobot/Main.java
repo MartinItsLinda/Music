@@ -1,5 +1,6 @@
 package net.tempobot;
 
+import com.moandjiezana.toml.Toml;
 import com.sedmelluq.discord.lavaplayer.container.MediaContainerRegistry;
 import com.sedmelluq.discord.lavaplayer.player.AudioConfiguration;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
@@ -33,6 +34,7 @@ import net.tempobot.music.event.GuildJoinLeaveListener;
 import net.tempobot.music.event.GuildMessageReactionListener;
 import net.tempobot.music.event.GuildVoiceListener;
 import net.tempobot.music.handler.MusicCommandHandler;
+import net.tempobot.music.source.spotify.SpotifyAudioSourceManager;
 
 import java.util.Collections;
 import java.util.function.Function;
@@ -75,14 +77,33 @@ public class Main extends Module {
 
         getLogger().info("Registering audio sources...");
 
-        audioPlayerManager.registerSourceManager(youtubeAudioSourceManager);
-        audioPlayerManager.registerSourceManager(SoundCloudAudioSourceManager.createDefault());
-        audioPlayerManager.registerSourceManager(new BandcampAudioSourceManager());
-        audioPlayerManager.registerSourceManager(new VimeoAudioSourceManager());
-        audioPlayerManager.registerSourceManager(new TwitchStreamAudioSourceManager());
-        audioPlayerManager.registerSourceManager(new BeamAudioSourceManager());
-        audioPlayerManager.registerSourceManager(new LocalAudioSourceManager());
-        audioPlayerManager.registerSourceManager(new HttpAudioSourceManager(MediaContainerRegistry.DEFAULT_REGISTRY));
+        final Toml sourceManagers = this.getConfig().getTable("source-managers");
+        if (sourceManagers != null) { //if someone is trying to make errors happen intentionally then well, guess no audio for you
+
+            if (sourceManagers.getBoolean("youtube", false))
+                audioPlayerManager.registerSourceManager(youtubeAudioSourceManager);
+            if (sourceManagers.getBoolean("soundcloud", false))
+                audioPlayerManager.registerSourceManager(SoundCloudAudioSourceManager.createDefault());
+            if (sourceManagers.getBoolean("bandcamp", false))
+                audioPlayerManager.registerSourceManager(new BandcampAudioSourceManager());
+            if (sourceManagers.getBoolean("vimeo", false))
+                audioPlayerManager.registerSourceManager(new VimeoAudioSourceManager());
+            if (sourceManagers.getBoolean("twitch", false))
+                audioPlayerManager.registerSourceManager(new TwitchStreamAudioSourceManager());
+            if (sourceManagers.getBoolean("beam", false))
+                audioPlayerManager.registerSourceManager(new BeamAudioSourceManager());
+
+            if (sourceManagers.getBoolean("spotify", false)) {
+                audioPlayerManager.registerSourceManager(new SpotifyAudioSourceManager(youtubeAudioSourceManager,
+                        this.getConfig().getString("spotify.client-id"), this.getConfig().getString("spotify.client-secret")));
+            }
+
+            if (sourceManagers.getBoolean("local", false))
+                audioPlayerManager.registerSourceManager(new LocalAudioSourceManager());
+            if (sourceManagers.getBoolean("http", false))
+                audioPlayerManager.registerSourceManager(new HttpAudioSourceManager(MediaContainerRegistry.DEFAULT_REGISTRY));
+
+        }
 
         getLogger().info("Configuring audio player manager...");
 
@@ -96,6 +117,11 @@ public class Main extends Module {
         getLogger().info("Creating required tables...");
 
         final Database database = this.getDatabase();
+
+        if (database == null) {
+            this.getLogger().error("Cannot operate without a database.");
+            return;
+        }
 
         database.execute("CREATE TABLE IF NOT EXISTS `guilds`(" +
                 "`guild_id` BIGINT NOT NULL PRIMARY KEY, " +
@@ -160,12 +186,6 @@ public class Main extends Module {
                 "`added_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
                 "INDEX `guild_id`(`guild_id`))");
 
-//        database.execute("CREATE TABLE IF NOT EXISTS `guild_blocked_voice_channels`(" +
-//                "`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
-//                "`guild_id` BIGINT NOT NULL, " +
-//                "`channel_id` BIGINT NOT NULL, " +
-//                "INDEX `guild_id`(`guild_id`))");
-
         setPrefixGenerator((guild) -> GuildSettingsCache.get().getEntity(guild.getIdLong()).getPrefix());
 
         getLogger().info("Registering commands...");
@@ -214,7 +234,7 @@ public class Main extends Module {
                 .names("play", "p")
                 .description("Play a song either from a URL or select from a list of returned results.")
                 .usage("<track URL / search query>")
-                .botPermissions(Permission.VOICE_CONNECT, Permission.VOICE_SPEAK)
+                .botPermissions(Permission.VIEW_CHANNEL, Permission.VOICE_CONNECT, Permission.VOICE_SPEAK)
                 .executor(new CommandPlay())
                 .preExecutor(preExecutor)
                 .build());

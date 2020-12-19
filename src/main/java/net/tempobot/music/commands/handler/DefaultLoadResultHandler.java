@@ -61,7 +61,7 @@ public class DefaultLoadResultHandler implements AudioLoadResultHandler {
 
                 MessageUtils.sendMessage(this.context.getGuild(), this.context.message(String.format("`%s` has added %d songs to the song queue", this.context.getUser().getAsTag(), playlist.getTracks().size())));
 
-                this.scheduler.queue(playlist.getTracks(), this.context.getMember().getUser().getAsTag());
+                this.scheduler.queue(playlist.getTracks(), this.context.getUser().getAsTag());
             } else {
                 if (playlist.getSelectedTrack() != null) {
                     this.trackLoaded(playlist.getSelectedTrack());

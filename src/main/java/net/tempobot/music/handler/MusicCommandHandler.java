@@ -38,12 +38,12 @@ public class MusicCommandHandler implements CommandHandler {
                             context.reply(context.i18n("voiceNoActivity"));
                             return;
                         } else if (!context.getSelfMember().hasPermission(state.getChannel(), permission)) {
-                            context.reply(context.i18n("botNoVoicePermission", permission.getName(), state.getChannel().getName()));
+                            context.reply(String.format(":no_entry_sign: I don't have permission **%s** for channel **:speaker:%s**", permission.getName(), state.getChannel().getName()));
                             return;
                         }
 
                     } else if (!member.hasPermission(context.getChannel(), permission)) {
-                        context.reply(context.i18n("botMissingPermission", permission.getName()));
+                        context.reply(String.format(":no_entry_sign: I don't have permission **%s** for channel **#%s**", permission.getName(), context.getChannel().getName()));
                         return;
                     }
 
