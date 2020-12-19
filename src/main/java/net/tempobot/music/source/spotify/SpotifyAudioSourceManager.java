@@ -202,7 +202,17 @@ public class SpotifyAudioSourceManager implements AudioSourceManager {
         try {
             final Track track = this.spotifyApi.getTrack(res.group(res.groupCount())).build().execute();
 
-            return this.youtubeAudioSourceManager.loadItem(manager, new AudioReference(String.format("ytsearch: %s %s", track.getName(), track.getArtists()[0].getName()), null));
+            final AudioItem item = this.youtubeAudioSourceManager.loadItem(manager, new AudioReference(String.format("ytsearch: %s %s", track.getName(), track.getArtists()[0].getName()), null));
+            if (item == null) return null;
+
+            final BasicAudioPlaylist plist = (BasicAudioPlaylist) item;
+            if (plist.getSelectedTrack() != null) {
+                return plist.getSelectedTrack();
+            } else if (plist.getTracks().size() > 0) {
+                return plist.getTracks().get(0);
+            }
+
+            return null;
         } catch (Exception e) {
             throw new FriendlyException(e.getMessage(), Severity.FAULT, e);
         }

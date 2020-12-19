@@ -1,11 +1,15 @@
 package net.tempobot.music.util;
 
 import com.sheepybot.api.entities.messaging.Messaging;
-import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.*;
 import net.tempobot.Main;
 import net.tempobot.cache.GuildSettingsCache;
 import net.tempobot.guild.GuildSettings;
 
+import java.awt.*;
+import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 public class MessageUtils {
