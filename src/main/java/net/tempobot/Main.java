@@ -39,7 +39,7 @@ import net.tempobot.music.source.spotify.SpotifyAudioSourceManager;
 import java.util.Collections;
 import java.util.function.Function;
 
-@ModuleData(name = "Music", version = "1.11.16")
+@ModuleData(name = "Music", version = "1.12.16")
 public class Main extends Module {
 
     public static final int MESSAGE_DELETE_TIME = 15;

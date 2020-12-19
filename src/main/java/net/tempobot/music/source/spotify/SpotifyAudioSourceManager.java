@@ -168,7 +168,7 @@ public class SpotifyAudioSourceManager implements AudioSourceManager {
                 final AudioItem audioItem = this.youtubeAudioSourceManager.loadItem(manager, new AudioReference(String.format("ytsearch: %s %s", track.getName(), track.getArtists()[0].getName()), null));
                 if (audioItem == null) continue;
 
-                final BasicAudioPlaylist plist = (BasicAudioPlaylist) item;
+                final BasicAudioPlaylist plist = (BasicAudioPlaylist) audioItem;
                 if (plist.getSelectedTrack() != null) {
                     playlist.add(plist.getSelectedTrack());
                 } else if (plist.getTracks().size() > 0) {
