@@ -11,6 +11,7 @@ public class GuildSettings {
     private boolean premium;
     private final List<Long> djRoles;
     private final List<Long> blockedTextChannels;
+    private final List<Preset> presets;
     private final long addedAt;
 
     private String prefix;
@@ -32,11 +33,13 @@ public class GuildSettings {
                          final int volume,
                          @NotNull("dj roles cannot be null") final List<Long> djRoles,
                          @NotNull("blocked text channels cannot be null") final List<Long> blockedTextChannels,
+                         @NotNull("presets cannot be null") final List<Preset> presets,
                          final long addedAt) {
         Objects.checkArgument(prefix.length() >= 1 && prefix.length() <= 5, "prefix must be between 1 and 5 in length");
         this.guildId = guildId;
         this.djRoles = djRoles;
         this.blockedTextChannels = blockedTextChannels;
+        this.presets = presets;
         this.addedAt = addedAt;
 
         this.prefix = prefix;
@@ -116,6 +119,10 @@ public class GuildSettings {
 
     public List<Long> getBlockedTextChannels() {
         return this.blockedTextChannels;
+    }
+
+    public List<Preset> getPresets() {
+        return this.presets;
     }
 
     public boolean isPremium() {

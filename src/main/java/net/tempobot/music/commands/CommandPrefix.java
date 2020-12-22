@@ -4,6 +4,7 @@ import com.sheepybot.api.entities.command.Arguments;
 import com.sheepybot.api.entities.command.CommandContext;
 import com.sheepybot.api.entities.command.CommandExecutor;
 import com.sheepybot.api.entities.command.parsers.ArgumentParsers;
+import com.sheepybot.api.entities.database.object.DBObject;
 import net.dv8tion.jda.api.Permission;
 import net.tempobot.Main;
 import net.tempobot.cache.GuildSettingsCache;
@@ -28,8 +29,8 @@ public class CommandPrefix implements CommandExecutor {
 
             context.replace("{{prefix}}", prefix);
 
-            final boolean updated = Main.get().getDatabase().execute("UPDATE `guilds` SET `guild_prefix` = ? WHERE `guild_id` = ?", prefix, context.getGuild().getIdLong());
-            if (updated) {
+            final DBObject object = Main.get().getDatabase().execute("UPDATE `guilds` SET `guild_prefix` = ? WHERE `guild_id` = ?", prefix, context.getGuild().getIdLong());
+            if (object != null && object.getBoolean("success")) {
                 settings.setPrefix(prefix);
                 MessageUtils.sendMessage(context.getGuild(), context.message(String.format("Your prefix has been updated to `%s`.\n**WARNING:** This command is scheduled to be removed and may go at any point, please use the {{prefix}}settings command instead.", prefix)));
             } else {

@@ -11,6 +11,7 @@ import net.tempobot.cache.GuildSettingsCache;
 import net.tempobot.guild.GuildSettings;
 import net.tempobot.music.audio.AudioController;
 import net.tempobot.music.commands.handler.DefaultLoadResultHandler;
+import net.tempobot.music.source.spotify.SpotifyAudioSourceManager;
 import net.tempobot.music.util.MessageUtils;
 import org.apache.commons.validator.routines.UrlValidator;
 
@@ -35,6 +36,8 @@ public class CommandPlay implements CommandExecutor {
             String query = String.join(" ", args.next(ArgumentParsers.REMAINING_STRING_NO_QUOTE));
             if (!VALIDATOR.isValid(query)) {
                 query = "ytsearch: " + query;
+            } else if (SpotifyAudioSourceManager.SPOTIFY_LINK_REGEX.matcher(query).find()) {
+                MessageUtils.sendMessage(context.getGuild(), context.message("Detected a Spotify link, for large albums/playlists this might take a bit..."));
             }
 
             controller.setTextChannelId(context.getChannel());

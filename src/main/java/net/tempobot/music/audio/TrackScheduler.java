@@ -477,9 +477,12 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
 
         }
 
+        joiner.add("_ _");
+        joiner.add("_ _");
+
         builder.addField("Track History", joiner.toString(), true);
-        builder.setFooter(String.format("Page %d/%d", page, pageCount));
         builder.setDescription(description);
+        builder.setFooter(String.format("Page %d/%d", page, pageCount));
 
         final Consumer<Message> actionConsumer = message -> {
             LOGGER.info(String.format("Updating stored queue message ID from %d to %d", this.getCurrentSongMessageId(), message.getIdLong()));
@@ -517,18 +520,19 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
                                               final boolean forceSend) {
         Objects.checkArgument(page >= 1, "page cannot be less than 1");
 
+        final int queueSize = this.getQueue().size();
         final List<AudioTrack> queue = this.getQueue().stream().skip(((page - 1) * 10)).limit(10).collect(Collectors.toList());
 
         //noinspection IntegerDivisionInFloatingPointContext
-        final int pageCount = (int) (Math.ceil(this.getQueue().size() / 10) + 1);
+        final int pageCount = (int) (Math.ceil(queueSize / 10) + 1);
 
         final long totalMusicLength = queue.stream().mapToLong(AudioTrack::getDuration).sum();
 
         final EmbedBuilder builder = new EmbedBuilder();
 
         String description;
-        if (this.getQueue().size() > 1) {
-            description = "There's " + this.getQueue().size() + " songs in the queue.";
+        if (queueSize > 1) {
+            description = "There's " + queueSize + " songs in the queue.";
         } else {
             if (this.getQueue().size() == 1) {
                 description = "There is one song in the queue.";
@@ -554,9 +558,12 @@ public class TrackScheduler extends AudioEventAdapterWrapped {
 
         }
 
-        builder.addField("Upcoming Songs:", joiner.toString(), true);
-        builder.setFooter(String.format("Page %d/%d", page, pageCount));
+        joiner.add("_ _");
+        joiner.add("_ _");
+
+        builder.addField("Upcoming Songs", joiner.toString(), true);
         builder.setDescription(description);
+        builder.setFooter(String.format("Page %d/%d", page, pageCount));
 
         final Consumer<Message> actionConsumer = message -> {
             this.currentQueueMessageId.set(message.getIdLong());

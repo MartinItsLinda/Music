@@ -11,6 +11,7 @@ import net.tempobot.cache.GuildSettingsCache;
 import net.tempobot.guild.GuildPlaylist;
 import net.tempobot.guild.GuildSettings;
 import net.tempobot.guild.PlaylistTrackData;
+import net.tempobot.music.util.MessageUtils;
 
 import java.util.concurrent.TimeUnit;
 
@@ -70,7 +71,7 @@ public class CommandPlaylist implements CommandExecutor {
                 case "clear":
                     break;
                 default:
-                    context.message(String.format("I'm not sure what you mean by %s, did you type it incorrectly?", op)).deleteAfter(15, TimeUnit.SECONDS).send();
+                    MessageUtils.sendMessage(context.getGuild(), context.message(String.format("I'm not sure what you mean by %s, did you type it incorrectly?", op)));
                     break;
             }
 

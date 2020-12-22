@@ -32,7 +32,7 @@ public class CommandHelp implements CommandExecutor {
         joiner.add("_ _");
         joiner.add("You can start streaming music straight away without any setup, just run the `{{prefix}}play` command, give it something to search for and you're good to go!");
         joiner.add("_ _");
-        joiner.add("Tempo supports a range of audio sources from YouTube, Soundcloud, Twitch and many more!");
+        joiner.add("Tempo supports a range of audio sources from YouTube, Soundcloud, Spotify, Twitch and many more!");
         joiner.add("_ _");
         joiner.add("To change Tempos behaviour, use the `{{prefix}}settings` command.");
         joiner.add("_ _");

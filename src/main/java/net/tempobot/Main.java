@@ -31,15 +31,17 @@ import net.tempobot.guild.GuildSettings;
 import net.tempobot.music.audio.AudioLoader;
 import net.tempobot.music.commands.*;
 import net.tempobot.music.event.GuildJoinLeaveListener;
+import net.tempobot.music.event.GuildMessageListener;
 import net.tempobot.music.event.GuildMessageReactionListener;
 import net.tempobot.music.event.GuildVoiceListener;
 import net.tempobot.music.handler.MusicCommandHandler;
+import net.tempobot.music.handler.MusicUsageFormatter;
 import net.tempobot.music.source.spotify.SpotifyAudioSourceManager;
 
 import java.util.Collections;
 import java.util.function.Function;
 
-@ModuleData(name = "Music", version = "1.12.16")
+@ModuleData(name = "Music", version = "2.12.16")
 public class Main extends Module {
 
     public static final int MESSAGE_DELETE_TIME = 15;
@@ -184,9 +186,19 @@ public class Main extends Module {
                 "`guild_id` BIGINT NOT NULL, " +
                 "`channel_id` BIGINT NOT NULL, " +
                 "`added_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
-                "INDEX `guild_id`(`guild_id`))");
+                "INDEX `guild_id`(`guild_id`));");
+
+        database.execute("CREATE TABLE IF NOT EXISTS `guild_presets`(" +
+                "`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
+                "`guild_id` BIGINT NOT NULL, " +
+                "`name` VARCHAR(30) CHARACTER SET utf8mb4 NOT NULL, " +
+                "`command` VARCHAR(30) NOT NULL, " +
+                "`arguments` TEXT NOT NULL, " +
+                "INDEX `id`(`id`), INDEX `guild_id`(`guild_id`));");
 
         setPrefixGenerator((guild) -> GuildSettingsCache.get().getEntity(guild.getIdLong()).getPrefix());
+
+        this.getAPI().setUsageFormatter(new MusicUsageFormatter());
 
         getLogger().info("Registering commands...");
 
@@ -234,6 +246,7 @@ public class Main extends Module {
                 .names("play", "p")
                 .description("Play a song either from a URL or select from a list of returned results.")
                 .usage("<track URL / search query>")
+                .example("Rick Astley Never Gonna Give You Up")
                 .botPermissions(Permission.VIEW_CHANNEL, Permission.VOICE_CONNECT, Permission.VOICE_SPEAK)
                 .executor(new CommandPlay())
                 .preExecutor(preExecutor)
@@ -279,7 +292,8 @@ public class Main extends Module {
         commandRegistry.register(Command.builder(this)
                 .names("seek", "goto")
                 .description("Seek to a time in a song.")
-                .usage("<time (e.g. 5m3s = 5 minutes and 3 seconds)>")
+                .usage("<time>")
+                .example("5m3s")
                 .executor(new CommandSeek())
                 .preExecutor(preExecutor)
                 .build());
@@ -333,8 +347,23 @@ public class Main extends Module {
                 .names("settings", "config")
                 .description("Change the settings Tempo operates with.")
                 .usage("<setting> <value>")
+                .example("blacklist #general")
+                .example("dj \"Music Squad\"")
+                .example("autoannounce off")
                 .userPermissions(Permission.MANAGE_SERVER)
                 .executor(new CommandSettings())
+                .preExecutor(preExecutor)
+                .build());
+
+        commandRegistry.register(Command.builder(this)
+                .names("preset")
+                .description("Create or remove a preset.")
+                .usage("<add|list|remove> [name/page] [command] [arguments...]")
+                .example("add rick play [https://www.youtube.com/watch?v=dQw4w9WgXcQ](https://www.youtube.com/watch?v=dQw4w9WgXcQ)")
+                .example("list 1")
+                .example("remove rick")
+                .userPermissions(Permission.MANAGE_SERVER)
+                .executor(new CommandPreset())
                 .preExecutor(preExecutor)
                 .build());
 
@@ -350,6 +379,7 @@ public class Main extends Module {
         eventRegistry.registerEvent(new GuildMessageReactionListener());
         eventRegistry.registerEvent(new GuildVoiceListener());
         eventRegistry.registerEvent(new GuildJoinLeaveListener());
+        eventRegistry.registerEvent(new GuildMessageListener());
 
     }
 

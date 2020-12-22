@@ -6,6 +6,7 @@ import com.sheepybot.api.entities.command.CommandExecutor;
 import com.sheepybot.api.entities.command.argument.RawArguments;
 import com.sheepybot.api.entities.command.parsers.ArgumentParsers;
 import com.sheepybot.api.entities.database.Database;
+import com.sheepybot.api.entities.database.object.DBObject;
 import com.sheepybot.api.entities.messaging.Messaging;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
@@ -72,8 +73,8 @@ public class CommandSettings implements CommandExecutor {
                             MessageUtils.sendMessage(context.getGuild(), context.message("You already have that as your prefix. :confused:"));
                         } else {
 
-                            final boolean updated = database.execute("UPDATE `guilds` SET `guild_prefix` = ? WHERE `guild_id` = ?", newPrefix, context.getGuild().getIdLong());
-                            if (updated) {
+                            final DBObject object = database.execute("UPDATE `guilds` SET `guild_prefix` = ? WHERE `guild_id` = ?", newPrefix, context.getGuild().getIdLong());
+                            if (object != null && object.getBoolean("success")) {
                                 settings.setPrefix(newPrefix);
                                 MessageUtils.sendMessage(context.getGuild(), context.message(String.format("Your prefix has been updated to `%s`.", newPrefix)));
                             } else {
@@ -94,14 +95,16 @@ public class CommandSettings implements CommandExecutor {
                         final TextChannel channel = args.next(CustomParsers.TEXT_CHANNEL);
                         if (settings.getBlockedTextChannels().contains(channel.getIdLong())) {
                             settings.getBlockedTextChannels().remove(channel.getIdLong());
-                            if (database.execute("DELETE FROM `guild_blocked_text_channels` WHERE `guild_id` = ? AND `channel_id` = ?;", context.getGuild().getIdLong(), channel.getIdLong())) {
+                            final DBObject object = database.execute("DELETE FROM `guild_blocked_text_channels` WHERE `guild_id` = ? AND `channel_id` = ?;", context.getGuild().getIdLong(), channel.getIdLong());
+                            if (object != null && object.getBoolean("success")) {
                                 MessageUtils.sendMessage(context.getGuild(), context.message(String.format("I've removed %s from the blacklisted channels, you can now use commands there again.", channel.getAsMention())));
                             } else {
                                 MessageUtils.sendMessage(context.getGuild(), context.message("Something went wrong and the channel might not have been removed from the blacklist, if this error keeps happening then please contact us."));
                             }
                         } else {
                             settings.getBlockedTextChannels().add(channel.getIdLong());
-                            if (database.execute("INSERT INTO `guild_blocked_text_channels`(`guild_id`, `channel_id`) VALUES(?, ?);", context.getGuild().getIdLong(), channel.getIdLong())) {
+                            final DBObject object = database.execute("INSERT INTO `guild_blocked_text_channels`(`guild_id`, `channel_id`) VALUES(?, ?);", context.getGuild().getIdLong(), channel.getIdLong());
+                            if (object != null && object.getBoolean("success")) {
                                 MessageUtils.sendMessage(context.getGuild(), context.message(String.format("I've put %s into the blacklist, you will no longer be able to use commands there.\nIf you want to change this then you will have to run this command again in a different channel.", channel.getAsMention())));
                             } else {
                                 MessageUtils.sendMessage(context.getGuild(), context.message("Something went wrong and the channel might not have been added to the blacklist, if this error keeps happening then please contact us."));
@@ -120,14 +123,15 @@ public class CommandSettings implements CommandExecutor {
                         final Role role = args.next(CustomParsers.ROLE);
                         if (settings.getDjRoles().contains(role.getIdLong())) {
                             settings.getDjRoles().remove(role.getIdLong());
-                            if (database.execute("DELETE FROM `guild_dj_roles` WHERE `guild_id` = ? AND `role_id` = ?;", context.getGuild().getIdLong(), role.getIdLong())) {
+                            final DBObject object = database.execute("DELETE FROM `guild_dj_roles` WHERE `guild_id` = ? AND `role_id` = ?;", context.getGuild().getIdLong(), role.getIdLong());
+                            if (object != null && object.getBoolean("success")) {
                                 MessageUtils.sendMessage(context.getGuild(), context.message(String.format("I've removed %s from the list of DJ's, they will have access to do anything that is DJ restricted and will **not** be able to forcibly skip songs.", role.getName())));
                             } else {
                                 MessageUtils.sendMessage(context.getGuild(), context.message("Something went wrong and the role may not have been removed from the list of DJ's, if this error keeps happening then please contact us."));
                             }
                         } else {
                             settings.getDjRoles().add(role.getIdLong());
-                            if (database.execute("INSERT INTO `guild_dj_roles`(`guild_id`, `role_id`) VALUES(?, ?);", context.getGuild().getIdLong(), role.getIdLong())) {
+                            if (database.execute("INSERT INTO `guild_dj_roles`(`guild_id`, `role_id`) VALUES(?, ?);", context.getGuild().getIdLong(), role.getIdLong()) != null) {
                                 MessageUtils.sendMessage(context.getGuild(), context.message(String.format("I've added %s to the list of DJ's, they will now have access to do anything that is DJ restricted and will be able to forcibly skip songs.", role.getName())));
                             } else {
                                 MessageUtils.sendMessage(context.getGuild(), context.message("Something went wrong and the role may not have been added to the list of DJ's, if this error keeps happening then please contact us."));
@@ -202,7 +206,8 @@ public class CommandSettings implements CommandExecutor {
 
                         settings.setVolume(volume);
 
-                        if (database.execute("UPDATE `guilds` SET `volume` = ? WHERE `guild_id` = ?;", volume, context.getGuild().getIdLong())) {
+                        final DBObject object = database.execute("UPDATE `guilds` SET `volume` = ? WHERE `guild_id` = ?;", volume, context.getGuild().getIdLong());
+                        if (object != null && object.getBoolean("success")) {
                             MessageUtils.sendMessage(context.getGuild(), context.message(String.format("Your preset volume has been updated, whenever Tempo joins a voice channel he will start off playing at %d volume.", volume)));
                         } else {
                             MessageUtils.sendMessage(context.getGuild(), context.message("Something went wrong and your preset volume might not have been updated, if this error keeps happening then please contact us."));
